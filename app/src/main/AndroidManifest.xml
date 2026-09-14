@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- 定位:API 31+ 必须 FINE 与 COARSE 成对声明,缺 COARSE 会被降级/拒绝 -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- 前台服务:API 34+ 起除 FOREGROUND_SERVICE 外还必须声明 FOREGROUND_SERVICE_LOCATION,
+         且 <service> 上要写 android:foregroundServiceType="location" -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
+    <!-- API 33+ 前台服务常驻通知需要运行时申请 POST_NOTIFICATIONS -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- 后台定位:API 30+ 必须运行时单独申请,不能和其他权限打包请求 -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!--
+      ACCESS_MOCK_LOCATION 是 signature 级权限,仅声明不会生效。
+      真正生效方式(二选一):
+        1. 开发者选项 → 选择模拟位置信息应用 → 选中本应用
+        2. adb shell appops set com.learning.mockrun android:mock_location allow
+    -->
+    <uses-permission android:name="android.permission.ACCESS_MOCK_LOCATION" />
+
+    <application
+        android:allowBackup="true"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.MockRun">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".MockLocationService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+    </application>
+</manifest>

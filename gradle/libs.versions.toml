@@ -1,0 +1,18 @@
+# 版本说明:全部来自 2026-09-14 实地查询,不要凭记忆改动。
+# AGP 9.x 默认内置 Kotlin(不再应用 org.jetbrains.kotlin.android 插件)。
+# AGP 9.4 要求 Gradle >= 9.6.0(官方兼容表)。
+[versions]
+agp = "9.4.0"
+coreKtx = "1.19.0"
+appcompat = "1.8.0"
+material = "1.14.0"
+osmdroid = "6.1.20"   # Phase 2 启用;osmdroid 项目已归档,6.1.20 为最终版
+
+[libraries]
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+osmdroid-android = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }

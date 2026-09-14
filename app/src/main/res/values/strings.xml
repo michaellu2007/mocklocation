@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MockRun</string>
+    <string name="phase0_status">包名:%1$s\n模拟位置授权:%2$s</string>
+    <string name="phase0_hint">若显示“未授权”,请到\n开发者选项 → 选择模拟位置信息应用 选中本应用,\n或执行\nadb shell appops set com.learning.mockrun android:mock_location allow</string>
+</resources>
