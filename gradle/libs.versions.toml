@@ -15,7 +15,8 @@ androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = 
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 osmdroid-android = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
-amap-3dmap = { group = "com.amap.api", name = "3dmap", version.ref = "amap3d" }
+# 注意:访问器不能以数字开头,所以叫 amap-map 而不是 amap-3dmap
+amap-map = { group = "com.amap.api", name = "3dmap", version.ref = "amap3d" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 
 [plugins]

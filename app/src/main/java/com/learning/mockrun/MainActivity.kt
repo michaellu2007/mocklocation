@@ -11,6 +11,8 @@ import android.os.Process
 import android.provider.Settings
 import android.widget.Button
 import android.widget.EditText
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -21,7 +23,23 @@ class MainActivity : AppCompatActivity() {
     private lateinit var statusText: TextView
     private lateinit var latInput: EditText
     private lateinit var lonInput: EditText
+    private lateinit var rbAmap: RadioButton
+    private lateinit var rbBaidu: RadioButton
     private var pendingStart = false
+
+    private val pickerLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                val data = result.data ?: return@registerForActivityResult
+                val lat = data.getDoubleExtra(PickerContract.EXTRA_LAT, Double.NaN)
+                val lng = data.getDoubleExtra(PickerContract.EXTRA_LNG, Double.NaN)
+                if (!lat.isNaN() && !lng.isNaN()) {
+                    latInput.setText("%.6f".format(lat))
+                    lonInput.setText("%.6f".format(lng))
+                    refreshStatus()
+                }
+            }
+        }
 
     private val locationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
@@ -49,7 +67,26 @@ class MainActivity : AppCompatActivity() {
         statusText = findViewById(R.id.status_text)
         latInput = findViewById(R.id.input_lat)
         lonInput = findViewById(R.id.input_lon)
+        rbAmap = findViewById(R.id.rb_amap)
+        rbBaidu = findViewById(R.id.rb_baidu)
 
+        // 地图引擎选择:持久化 + 切换即生效
+        when (MapEngine.load(this)) {
+            MapEngine.AMAP -> rbAmap.isChecked = true
+            MapEngine.BAIDU -> rbBaidu.isChecked = true
+        }
+        findViewById<RadioGroup>(R.id.engine_group)
+            .setOnCheckedChangeListener { _, checkedId ->
+                val engine = if (checkedId == R.id.rb_baidu) MapEngine.BAIDU else MapEngine.AMAP
+                MapEngine.save(this, engine)
+                Toast.makeText(
+                    this,
+                    getString(R.string.toast_engine_switched, engine.displayName),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+
+        findViewById<Button>(R.id.btn_pick).setOnClickListener { openPicker() }
         findViewById<Button>(R.id.btn_open_dev).setOnClickListener {
             startActivity(Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS))
         }
@@ -63,6 +100,20 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         refreshStatus()
+    }
+
+    /** 按当前选中的引擎打开选点页;未接入的引擎给出提示而不是崩。 */
+    private fun openPicker() {
+        val engine = MapEngine.load(this)
+        if (!engine.available) {
+            Toast.makeText(
+                this,
+                getString(R.string.toast_engine_pending, engine.displayName),
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+        pickerLauncher.launch(Intent(this, AMapPickerActivity::class.java))
     }
 
     private fun refreshStatus() {

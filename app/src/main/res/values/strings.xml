@@ -14,6 +14,17 @@
     <string name="toast_invalid">坐标格式或范围不正确</string>
     <string name="toast_started">模拟已启动:%1$s, %2$s</string>
     <string name="toast_stopped">模拟已停止</string>
+    <string name="toast_engine_switched">地图引擎:%1$s</string>
+    <string name="toast_engine_pending">%1$s 引擎待接入(等待 SDK 就位)</string>
+    <string name="toast_pick_first">请先点击地图选择位置</string>
+
+    <string name="engine_amap">高德</string>
+    <string name="engine_baidu">百度</string>
+    <string name="btn_pick">地图选点</string>
+    <string name="btn_confirm_pick">确认选点</string>
+    <string name="amap_hint_tap">点击地图放置标记</string>
+    <string name="amap_marker_title">选点</string>
+    <string name="picked_coord_fmt">已选:%1$s, %2$s\n(WGS-84)</string>
 
     <string name="notif_channel_name">模拟定位运行状态</string>
     <string name="notif_title">MockRun 正在模拟定位</string>

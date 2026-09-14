@@ -1,5 +1,13 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
+}
+
+// key 类配置放 local.properties(gitignore 内),不进版本库
+val localProps = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
 }
 
 android {
@@ -16,6 +24,14 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+
+        // 高德 key 为空时地图显示空白网格但不崩;key 由用户申请后填入 local.properties
+        manifestPlaceholders["amapKey"] = localProps.getProperty("amap_key") ?: ""
+
+        // 地图 SDK 原生库只保留 arm64(目标机 Redmi K30 Pro 为 arm64,省一半体积)
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
     }
 
     buildTypes {
@@ -42,5 +58,6 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
+    implementation(libs.amap.map)
     testImplementation(libs.junit)
 }

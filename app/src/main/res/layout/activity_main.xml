@@ -39,6 +39,35 @@
         android:inputType="numberSigned"
         android:text="116.4074" />
 
+    <RadioGroup
+        android:id="@+id/engine_group"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:orientation="horizontal">
+
+        <RadioButton
+            android:id="@+id/rb_amap"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:text="@string/engine_amap" />
+
+        <RadioButton
+            android:id="@+id/rb_baidu"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="@string/engine_baidu" />
+    </RadioGroup>
+
+    <Button
+        android:id="@+id/btn_pick"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="@string/btn_pick" />
+
     <Button
         android:id="@+id/btn_start"
         android:layout_width="match_parent"

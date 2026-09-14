@@ -30,6 +30,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MockRun">
 
+        <!-- 高德 key 来自 local.properties 的 amap_key(gitignore 内);留空时地图空白但不崩 -->
+        <meta-data
+            android:name="com.amap.api.v2.apikey"
+            android:value="${amapKey}" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -38,6 +43,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".AMapPickerActivity"
+            android:exported="false" />
 
         <service
             android:name=".MockLocationService"

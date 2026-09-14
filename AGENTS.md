@@ -49,11 +49,27 @@ Android 模拟定位 App，包名 `com.learning.mockrun`，Kotlin。合规边界
 6. Android 12+ 禁止后台启动前台服务：只能由 MainActivity 的按钮（用户可见交互）触发，**不要**放 `Application.onCreate` 或 `BOOT_COMPLETED`。
 7. 微信不读 `isFromMockProvider()`/`isMock()`，App 自己不需要判断 mock 标记。
 
-## Phase 2 待办（地图）
+## Phase 2 地图选点(进行中)
+
+- **引擎可切换**:MapEngine 枚举(AMAP/BAIDU)持久化在 SharedPreferences;主界面 RadioGroup 切换;
+  「地图选点」按钮按引擎分发;选点页统一通过 PickerContract 返回 **WGS-84** 坐标(引擎各自页内完成转换)。
+- 高德已接入:`com.amap.api:3dmap:10.0.600`(maven central)。选点页 AMapPickerActivity:
+  隐私合规调用(updatePrivacyShow/Agree)必须在 super.onCreate 之前;数据是 GCJ-02,标记放 GCJ-02、返回前转 WGS-84。
+- 百度待接入:等用户下载「基础地图」aar → 放 app/libs → BaiduPickerActivity;数据是 BD-09,同样转 WGS-84。
+  未接入前选百度引擎点「地图选点」会 toast 提示,不崩。
+- **key 管理**:高德 key 放 local.properties 的 `amap_key=`(gitignore 内),经 manifestPlaceholder 注入;
+  key 留空时地图空白网格但点击回调照常工作。百度 key 同理 `baidu_ak=`。
+- 版本目录条目不能用会让 Kotlin 访问器以数字开头的名字(如 amap-3dmap → libs.amap.3dmap 编译错),
+  已命名 amap-map。
+- ABI 只保留 arm64-v8a(目标机 K30 Pro);以后要上模拟器记得加 x86_64。
+- Android 12 上 shell 不能 `am start` 未导出的 Activity(SecurityException),测试选点页只能用户手点。
+
+## Phase 3 待办(UI/轨迹)
 
 - osmdroid 必须先设 `Configuration.getInstance().userAgentValue = packageName`，否则 OSM 瓦片服务器 403。
 - 国内访问 OSM 官方源慢：换镜像源或用离线 MBTiles。
 - 瓦片缓存路径放 app 私有目录（API 29+ 分区存储）。
+- （用户已定方案:高德+百度双引擎切换,osmdroid 暂时不用;坐标转换层 CoordinateConverter 已带单测）
 
 ## 其他已知取舍（有意识即可，别动）
 
