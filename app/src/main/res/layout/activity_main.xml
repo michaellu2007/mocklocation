@@ -102,6 +102,14 @@
                     android:textSize="14sp" />
 
                 <RadioButton
+                    android:id="@+id/rb_mode_custom"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:text="@string/mode_custom"
+                    android:textSize="14sp" />
+
+                <RadioButton
                     android:id="@+id/rb_mode_point"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -109,6 +117,33 @@
                     android:text="@string/mode_point"
                     android:textSize="14sp" />
             </RadioGroup>
+
+            <LinearLayout
+                android:id="@+id/custom_row"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <Button
+                    android:id="@+id/btn_draw"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="4dp"
+                    android:layout_weight="1"
+                    android:text="@string/btn_draw" />
+
+                <Button
+                    android:id="@+id/btn_my"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:layout_weight="1"
+                    android:text="@string/btn_my" />
+            </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/preset_row"

@@ -51,7 +51,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var presetSpinner: Spinner
     private lateinit var rbModeRoute: RadioButton
     private lateinit var rbModePoint: RadioButton
+    private lateinit var rbModeCustom: RadioButton
     private lateinit var presetRow: android.view.View
+    private lateinit var customRow: android.view.View
     private lateinit var rbAmap: RadioButton
     private lateinit var rbBaidu: RadioButton
 
@@ -61,6 +63,7 @@ class MainActivity : AppCompatActivity() {
     private var beagleBitmap: Bitmap? = null
 
     private var anchor: GeoPoint? = null
+    private var customRoute: RouteStore.SavedRoute? = null
     private val uiHandler = Handler(Looper.getMainLooper())
     private var feedCount = 0
     private var pendingStart = false
@@ -91,6 +94,27 @@ class MainActivity : AppCompatActivity() {
                 val lng = data.getDoubleExtra(PickerContract.EXTRA_LNG, Double.NaN)
                 if (!lat.isNaN() && !lng.isNaN()) {
                     setAnchor(GeoPoint(lat, lng), animateCamera = true)
+                }
+            }
+        }
+
+    /** 绘制路线 / 我的路线 共用:拿到整条路线(WGS-84)后装填为自定义路线 */
+    private val routeResultLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                val data = result.data ?: return@registerForActivityResult
+                val pts = data.getDoubleArrayExtra(PickerContract.EXTRA_ROUTE_PTS) ?: return@registerForActivityResult
+                val name = data.getStringExtra(PickerContract.EXTRA_ROUTE_NAME) ?: getString(R.string.notif_default_name)
+                val loop = data.getBooleanExtra(PickerContract.EXTRA_ROUTE_LOOP, true)
+                val geo = pts.toList().chunked(2).map { GeoPoint(it[0], it[1]) }
+                customRoute = RouteStore.SavedRoute(name, loop, geo)
+                rbModeCustom.isChecked = true
+                updateRoutePreview()
+                // 相机看一眼路线
+                anchor = customRoute?.points?.firstOrNull() ?: anchor
+                anchor?.let {
+                    val g = CoordinateConverter.wgs84ToGcj02(it.lat, it.lng)
+                    aMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(g.lat, g.lng), 16f))
                 }
             }
         }
@@ -134,6 +158,8 @@ class MainActivity : AppCompatActivity() {
         presetRow = findViewById(R.id.preset_row)
         rbModeRoute = findViewById(R.id.rb_mode_route)
         rbModePoint = findViewById(R.id.rb_mode_point)
+        rbModeCustom = findViewById(R.id.rb_mode_custom)
+        customRow = findViewById(R.id.custom_row)
         rbAmap = findViewById(R.id.rb_amap)
         rbBaidu = findViewById(R.id.rb_baidu)
         mapView.onCreate(savedInstanceState)
@@ -191,7 +217,15 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<RadioGroup>(R.id.mode_group).setOnCheckedChangeListener { _, _ ->
             presetRow.visibility = if (rbModeRoute.isChecked) android.view.View.VISIBLE else android.view.View.GONE
+            customRow.visibility = if (rbModeCustom.isChecked) android.view.View.VISIBLE else android.view.View.GONE
             updateRoutePreview()
+        }
+
+        findViewById<Button>(R.id.btn_draw).setOnClickListener {
+            routeResultLauncher.launch(Intent(this, RouteEditorActivity::class.java))
+        }
+        findViewById<Button>(R.id.btn_my).setOnClickListener {
+            routeResultLauncher.launch(Intent(this, SavedRoutesActivity::class.java))
         }
 
         val seek = findViewById<SeekBar>(R.id.speed_seek)
@@ -245,11 +279,19 @@ class MainActivity : AppCompatActivity() {
     private fun updateRoutePreview() {
         routePolyline?.remove()
         routePolyline = null
+        if (rbModeCustom.isChecked) {
+            val r = customRoute ?: return
+            drawRouteOnMap(r.points)
+            return
+        }
         val a = anchor ?: return
         if (!rbModeRoute.isChecked) return
         val preset = PresetRoutes.ALL.getOrNull(presetSpinner.selectedItemPosition) ?: return
         presetLenText.text = "~${preset.lengthM}m"
-        val route = PresetRoutes.generate(preset, a)
+        drawRouteOnMap(PresetRoutes.generate(preset, a))
+    }
+
+    private fun drawRouteOnMap(route: List<GeoPoint>) {
         val gcjPts = route.map {
             val g = CoordinateConverter.wgs84ToGcj02(it.lat, it.lng)
             LatLng(g.lat, g.lng)
@@ -290,20 +332,46 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun doStart() {
-        val a = anchor
-            ?: aMap?.cameraPosition?.target?.let {
+        val customMode = rbModeCustom.isChecked
+        val routeMode = rbModeRoute.isChecked
+
+        // 自定义模式的坐标来自路线本身,不依赖锚点
+        var a: GeoPoint? = anchor
+        if (!customMode && a == null) {
+            a = aMap?.cameraPosition?.target?.let {
                 val wgs = CoordinateConverter.gcj02ToWgs84(it.latitude, it.longitude)
                 GeoPoint(wgs.lat, wgs.lng).also { p -> setAnchor(p, animateCamera = false) }
             }
-        if (a == null) {
+        }
+        if (!customMode && a == null) {
             Toast.makeText(this, R.string.toast_pick_first, Toast.LENGTH_SHORT).show()
             return
         }
+        val anchorPoint = a
 
-        val routeMode = rbModeRoute.isChecked
         val preset = PresetRoutes.ALL.getOrNull(presetSpinner.selectedItemPosition) ?: PresetRoutes.ALL[0]
-        val name = if (routeMode) preset.label else getString(R.string.notif_default_name)
-        val route: List<GeoPoint> = if (routeMode) PresetRoutes.generate(preset, a) else listOf(a)
+
+        val name: String
+        val route: List<GeoPoint>
+        when {
+            customMode -> {
+                val r = customRoute
+                if (r == null) {
+                    Toast.makeText(this, R.string.toast_no_custom_route, Toast.LENGTH_SHORT).show()
+                    return
+                }
+                name = r.name
+                route = r.points
+            }
+            routeMode -> {
+                name = preset.label
+                route = PresetRoutes.generate(preset, anchorPoint!!)
+            }
+            else -> {
+                name = getString(R.string.notif_default_name)
+                route = listOf(anchorPoint!!)
+            }
+        }
         val pts = DoubleArray(route.size * 2)
         route.forEachIndexed { i, p ->
             pts[i * 2] = p.lat

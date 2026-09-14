@@ -48,6 +48,14 @@
             android:name=".AMapPickerActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".RouteEditorActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".SavedRoutesActivity"
+            android:exported="false" />
+
         <service
             android:name=".MockLocationService"
             android:exported="false"

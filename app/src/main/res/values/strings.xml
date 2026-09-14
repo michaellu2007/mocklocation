@@ -7,14 +7,16 @@
     <string name="btn_start">开跑</string>
     <string name="btn_stop">停止</string>
 
-    <string name="toast_need_auth">请先在开发者选项中把本应用设为模拟位置信息应用</string>
+    <string name="toast_need_auth">请先在开发者选项中把本应用设为模拟位置信息应用(或点一下状态栏)</string>
     <string name="toast_need_perm">定位权限被拒绝,无法模拟</string>
     <string name="toast_invalid">坐标无效</string>
     <string name="toast_started">比格出发!</string>
     <string name="toast_stopped">已停止</string>
     <string name="toast_engine_switched">地图引擎:%1$s</string>
     <string name="toast_engine_pending">%1$s 引擎待接入(等待 SDK 就位)</string>
-    <string name="toast_pick_first">请先点击地图选择位置</string>
+    <string name="toast_pick_first">请先长按地图或选点设置锚点</string>
+    <string name="toast_no_custom_route">还没有自定义路线,先「绘制路线」或「我的路线」选一条</string>
+    <string name="toast_saved">已存入我的路线</string>
 
     <string name="engine_amap">高德</string>
     <string name="engine_baidu">百度</string>
@@ -26,10 +28,35 @@
 
     <string name="mode_point">单点驻留</string>
     <string name="mode_route">环线开跑</string>
+    <string name="mode_custom">自定义</string>
+    <string name="btn_draw">绘制路线</string>
+    <string name="btn_my">我的路线</string>
     <string name="hint_longpress">长按地图设置锚点</string>
     <string name="speed_fmt">%1$.1f m/s · 配速 %2$s</string>
     <string name="status_idle">比格待命 · 引擎:%1$s</string>
     <string name="status_running">%1$s · %2$.1f m/s · 已喂 %3$d 点</string>
+
+    <string name="editor_hint_top">点按地图依次添加途经点</string>
+    <string name="editor_hint">点按地图添加第一个途经点</string>
+    <string name="editor_loop">环线(跑回起点)</string>
+    <string name="editor_pts_fmt">%1$d 个途经点 · 约 %2$.0f 米</string>
+    <string name="editor_need_pts">至少需要 2 个途经点</string>
+    <string name="btn_undo">撤销</string>
+    <string name="btn_clear">清空</string>
+    <string name="btn_save_use">保存并使用</string>
+
+    <string name="routes_title">我的路线</string>
+    <string name="btn_import">导入</string>
+    <string name="routes_hint_actions">点按路线可使用/导出/删除;导出的 JSON 文件可直接发给朋友导入</string>
+    <string name="routes_empty">还没有路线。回主界面「绘制路线」,或点右上角「导入」</string>
+    <string name="routes_count_fmt">%1$s\n%2$d 个点 · 约 %3$.0f 米 · %4$s</string>
+    <string name="routes_exported">已导出:%1$s</string>
+    <string name="routes_imported">已导入:%1$s</string>
+    <string name="routes_delete_confirm">删除「%1$s」?</string>
+    <string name="import_failed">导入失败:%1$s</string>
+    <string name="act_use">使用</string>
+    <string name="act_export">导出</string>
+    <string name="act_delete">删除</string>
 
     <string name="notif_channel_name">模拟定位运行状态</string>
     <string name="notif_title">比格正在跑</string>
