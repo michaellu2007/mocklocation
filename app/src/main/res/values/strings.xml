@@ -4,16 +4,14 @@
 
     <string name="phase1_status">包名:%1$s\n模拟位置授权:%2$s</string>
     <string name="btn_open_dev">去开发者选项授权</string>
-    <string name="btn_start">启动模拟</string>
-    <string name="btn_stop">停止模拟</string>
-    <string name="hint_lat">纬度 (-90 ~ 90)</string>
-    <string name="hint_lon">经度 (-180 ~ 180)</string>
+    <string name="btn_start">开跑</string>
+    <string name="btn_stop">停止</string>
 
     <string name="toast_need_auth">请先在开发者选项中把本应用设为模拟位置信息应用</string>
     <string name="toast_need_perm">定位权限被拒绝,无法模拟</string>
-    <string name="toast_invalid">坐标格式或范围不正确</string>
-    <string name="toast_started">模拟已启动:%1$s, %2$s</string>
-    <string name="toast_stopped">模拟已停止</string>
+    <string name="toast_invalid">坐标无效</string>
+    <string name="toast_started">比格出发!</string>
+    <string name="toast_stopped">已停止</string>
     <string name="toast_engine_switched">地图引擎:%1$s</string>
     <string name="toast_engine_pending">%1$s 引擎待接入(等待 SDK 就位)</string>
     <string name="toast_pick_first">请先点击地图选择位置</string>
@@ -24,9 +22,17 @@
     <string name="btn_confirm_pick">确认选点</string>
     <string name="amap_hint_tap">点击地图放置标记</string>
     <string name="amap_marker_title">选点</string>
-    <string name="picked_coord_fmt">已选:%1$s, %2$s\n(WGS-84)</string>
+    <string name="picked_coord_fmt">已选:%1$s, %2$s (WGS-84)</string>
+
+    <string name="mode_point">单点驻留</string>
+    <string name="mode_route">环线开跑</string>
+    <string name="hint_longpress">长按地图设置锚点</string>
+    <string name="speed_fmt">%1$.1f m/s · 配速 %2$s</string>
+    <string name="status_idle">比格待命 · 引擎:%1$s</string>
+    <string name="status_running">%1$s · %2$.1f m/s · 已喂 %3$d 点</string>
 
     <string name="notif_channel_name">模拟定位运行状态</string>
-    <string name="notif_title">MockRun 正在模拟定位</string>
-    <string name="notif_text">当前坐标:%1$s, %2$s</string>
+    <string name="notif_title">比格正在跑</string>
+    <string name="notif_route_text">%1$s · %2$s m/s</string>
+    <string name="notif_default_name">我的点位</string>
 </resources>

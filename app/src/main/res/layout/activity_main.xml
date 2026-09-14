@@ -1,85 +1,180 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center_horizontal"
-    android:padding="24dp">
+    android:layout_height="match_parent">
+
+    <com.amap.api.maps.TextureMapView
+        android:id="@+id/map_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
 
     <TextView
-        android:id="@+id/status_text"
+        android:id="@+id/hint_top"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:gravity="center"
-        android:textSize="15sp" />
-
-    <Button
-        android:id="@+id/btn_open_dev"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
         android:layout_marginTop="12dp"
-        android:text="@string/btn_open_dev" />
+        android:background="#66000000"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="6dp"
+        android:text="@string/hint_longpress"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp" />
 
-    <EditText
-        android:id="@+id/input_lat"
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:hint="@string/hint_lat"
-        android:inputType="numberSigned"
-        android:text="39.9042" />
+        android:layout_gravity="bottom"
+        android:fillViewport="false"
+        android:scrollbars="none">
 
-    <EditText
-        android:id="@+id/input_lon"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:hint="@string/hint_lon"
-        android:inputType="numberSigned"
-        android:text="116.4074" />
-
-    <RadioGroup
-        android:id="@+id/engine_group"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:orientation="horizontal">
-
-        <RadioButton
-            android:id="@+id/rb_amap"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:checked="true"
-            android:text="@string/engine_amap" />
+            android:background="@drawable/panel_bg"
+            android:orientation="vertical"
+            android:padding="16dp">
 
-        <RadioButton
-            android:id="@+id/rb_baidu"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="@string/engine_baidu" />
-    </RadioGroup>
+            <TextView
+                android:id="@+id/status_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="13sp" />
 
-    <Button
-        android:id="@+id/btn_pick"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:text="@string/btn_pick" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
-    <Button
-        android:id="@+id/btn_start"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:text="@string/btn_start" />
+                <RadioGroup
+                    android:id="@+id/engine_group"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
 
-    <Button
-        android:id="@+id/btn_stop"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/btn_stop" />
+                    <RadioButton
+                        android:id="@+id/rb_amap"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:text="@string/engine_amap"
+                        android:textSize="13sp" />
 
-</LinearLayout>
+                    <RadioButton
+                        android:id="@+id/rb_baidu"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:text="@string/engine_baidu"
+                        android:textSize="13sp" />
+                </RadioGroup>
+
+                <Space
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <Button
+                    android:id="@+id/btn_pick"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minWidth="0dp"
+                    android:text="@string/btn_pick"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <RadioGroup
+                android:id="@+id/mode_group"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:id="@+id/rb_mode_route"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    android:text="@string/mode_route"
+                    android:textSize="14sp" />
+
+                <RadioButton
+                    android:id="@+id/rb_mode_point"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:text="@string/mode_point"
+                    android:textSize="14sp" />
+            </RadioGroup>
+
+            <LinearLayout
+                android:id="@+id/preset_row"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <Spinner
+                    android:id="@+id/preset_spinner"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:id="@+id/preset_len"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <SeekBar
+                    android:id="@+id/speed_seek"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:max="59" />
+
+                <TextView
+                    android:id="@+id/speed_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btn_start"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:text="@string/btn_start" />
+
+                <Button
+                    android:id="@+id/btn_stop"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="1"
+                    android:text="@string/btn_stop" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+</FrameLayout>

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 比格犬(俯视,头朝上/北),作为地图上会转身的跑者标记。tricolor: 奶白底+棕斑+深色垂耳 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+
+    <!-- 身体:奶白胶囊 -->
+    <path
+        android:fillColor="#F5EBDD"
+        android:pathData="M18,13 h12 a6,6 0 0 1 6,6 v11 a6,6 0 0 1 -6,6 h-12 a6,6 0 0 1 -6,-6 v-11 a6,6 0 0 1 6,-6 z" />
+    <!-- 背部棕斑(比格三色的 saddle) -->
+    <path
+        android:fillColor="#8B5E3C"
+        android:pathData="M14,22 C14,19.5 34,19.5 34,22 L34,27 C34,29.5 14,29.5 14,27 Z" />
+    <!-- 尾巴(翘起的小尾巴) -->
+    <path
+        android:fillColor="#8B5E3C"
+        android:pathData="M21,36 C20,40 21,43 24,44 C25,42 26,39 27,36 Z" />
+    <!-- 头(奶白圆) -->
+    <path
+        android:fillColor="#F5EBDD"
+        android:pathData="M24,5 a7.5,7.5 0 1 1 -0.01,0 z" />
+    <!-- 左右垂耳(比格的标志性大耳朵) -->
+    <path
+        android:fillColor="#4E342E"
+        android:pathData="M17.5,7 C13,8 11.5,14 13.5,18.5 C14.5,20.5 17.5,20 17.5,17.5 L17.5,9 Z" />
+    <path
+        android:fillColor="#4E342E"
+        android:pathData="M30.5,7 C35,8 36.5,14 34.5,18.5 C33.5,20.5 30.5,20 30.5,17.5 L30.5,9 Z" />
+    <!-- 鼻子(正前方) -->
+    <path
+        android:fillColor="#212121"
+        android:pathData="M24,6.2 a1.8,1.8 0 1 1 -0.01,0 z" />
+    <!-- 头顶棕色斑块 -->
+    <path
+        android:fillColor="#8B5E3C"
+        android:pathData="M24,5 a7.5,7.5 0 0 1 7.4,6.3 C28,12.5 25,11 24,5 Z" />
+</vector>

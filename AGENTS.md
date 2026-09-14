@@ -64,6 +64,20 @@ Android 模拟定位 App，包名 `com.learning.mockrun`，Kotlin。合规边界
 - ABI 只保留 arm64-v8a(目标机 K30 Pro);以后要上模拟器记得加 x86_64。
 - Android 12 上 shell 不能 `am start` 未导出的 Activity(SecurityException),测试选点页只能用户手点。
 
+## Phase 3 轨迹回放(已完成核心)
+
+- **RoutePlayer**: 沿折线匀速推进 + OU 高斯随机游走漂移(参考公开 GPS 噪声建模,推模型重写)。
+  闭合环线取模循环,开线往返;步频横向抖动/Accuracy/Altitude/速度各自独立漂移。
+  喂点契约:服务每秒调 at(SystemClock.elapsedRealtimeNanos()),测试注入固定种子。
+- **PresetRoutes**: 锚点+周长生成环线(标准操场 400m 双直道双半圆 / 1k / 2k / 3.5k 圆环),锚点=地图长按。
+- **坐标系边界规则(关键)**: 内部状态(锚点/路线/注入)一律 WGS-84;高德显示是 GCJ-02,
+  进出地图各转换一次(wgs84ToGcj02 显示 / gcj02ToWgs84 输入)。别混。
+- **比格主题**: 地图标记 = ic_beagle(俯视小比格,flat marker 按 bearing 转身),
+  服务小图标 = ic_paw;控制卡 = 全屏地图底部半透明圆角卡。UI 继续往这个方向做。
+- **百度 SDK 在 maven**:`com.baidu.lbsyun:BaiduMapSDK_Map` 8.2.0.2(阿里云)/8.2.0(central),
+  不需要手动 aar。下一步:主界面双引擎地图视图切换(TextureMapView ↔ BaiduMap 的 MapView)。
+- 高德 TextureMapView(不是 MapView,性能更好);地图显示无需 key 也能跑(空白网格,点击/长按回调正常)。
+
 ## Phase 3 待办(UI/轨迹)
 
 - osmdroid 必须先设 `Configuration.getInstance().userAgentValue = packageName`，否则 OSM 瓦片服务器 403。
