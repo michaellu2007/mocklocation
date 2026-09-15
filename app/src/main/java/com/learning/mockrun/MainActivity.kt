@@ -707,11 +707,9 @@ class MainActivity : AppCompatActivity() {
             .joinToString(":") { "%02X".format(it) }
     }.getOrDefault("获取失败")
 
-    /** 公共 Key 额度策略:
-     *  debug 构建:超 10 次温和提醒,不设限——开发阶段图省事
-     *  release 构建:超 10 次强制门禁,启动与开跑都会被拦截,直到配置个人 Key */
+    /** 公共 Key 额度门禁: 仅当构建期 KEY_ENFORCE=true(分发版)时生效;开发构建零限制 */
     private fun maybeShowKeyNag() {
-        if (hasUserAmapKey()) return
+        if (!BuildConfig.KEY_ENFORCE || hasUserAmapKey()) return
         val count = prefs().getInt("launch_count", 0)
         if (count <= 10) return
         if (quotaBlocked()) {
@@ -726,9 +724,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** release 构建 + 未配置个人 Key + 启动超 10 次 = 功能拦截 */
+    /** 门禁条件: 构建期开关打开 + 未配置个人 Key + 启动超 10 次 */
     private fun quotaBlocked(): Boolean =
-        !BuildConfig.DEBUG && !hasUserAmapKey() && prefs().getInt("launch_count", 0) > 10
+        BuildConfig.KEY_ENFORCE && !hasUserAmapKey() && prefs().getInt("launch_count", 0) > 10
 
     private fun showKeyQuotaDialog() {
         androidx.appcompat.app.AlertDialog.Builder(this)

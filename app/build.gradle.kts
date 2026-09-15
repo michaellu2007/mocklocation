@@ -11,6 +11,8 @@ val localProps = Properties().apply {
 }
 // 发布仓库(GitHub Releases 在线检查更新用): local.properties 填 github_repo=用户名/仓库名,留空则检查更新按钮走纯本地文案
 val githubRepo = localProps.getProperty("github_repo") ?: ""
+// 公共Key额度门禁开关: 分发正式版时在 local.properties 加 key_enforce=true 重新出包;开发阶段留空=完全不限制
+val keyEnforce = localProps.getProperty("key_enforce")?.toBoolean() ?: false
 
 android {
     namespace = "com.learning.mockrun"
@@ -29,6 +31,8 @@ android {
 
         // 检查更新的发布仓库(GitHub Releases);留空 = 检查更新按钮走纯本地文案
         buildConfigField("String", "GITHUB_REPO", "\"$githubRepo\"")
+        // 公共Key额度门禁: 默认关(开发阶段零限制);分发版构建前在 local.properties 开
+        buildConfigField("boolean", "KEY_ENFORCE", "$keyEnforce")
 
         // 高德 key 为空时地图显示空白网格但不崩;key 由用户申请后填入 local.properties
         manifestPlaceholders["amapKey"] = localProps.getProperty("amap_key") ?: ""
