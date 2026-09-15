@@ -63,4 +63,7 @@ dependencies {
     implementation(libs.amap.map)
     implementation(libs.amap.search)
     testImplementation(libs.junit)
+    // 真实的 org.json:Android 平台 jar 里的 org.json 是桩实现(方法体直接抛 not mocked),
+    // 测试类路径让它优先,RouteStore 的单测才能真跑 JSON
+    testImplementation(libs.org.json)
 }

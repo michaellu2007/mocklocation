@@ -22,7 +22,13 @@ object RouteStore {
         return runCatching {
             val arr = JSONArray(f.readText())
             (0 until arr.length()).mapNotNull { i ->
-                parseRoute(arr.getJSONObject(i).toString())
+                // 旧版 bug 曾把对象编码成字符串写入,这里顺手救回;真正的坏条目跳过
+                val text = when (val raw = arr.get(i)) {
+                    is JSONObject -> raw.toString()
+                    is String -> raw
+                    else -> return@mapNotNull null
+                }
+                parseRoute(text)
             }
         }.getOrDefault(emptyList())
     }
@@ -54,7 +60,7 @@ object RouteStore {
 
     fun encodeAll(all: List<SavedRoute>): String {
         val arr = JSONArray()
-        all.forEach { arr.put(encode(it)) }
+        all.forEach { arr.put(JSONObject(encode(it))) }  // 必须放对象;put(String) 会让 list() 永远读回空
         return arr.toString(2)
     }
 
