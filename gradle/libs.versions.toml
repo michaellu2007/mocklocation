@@ -9,6 +9,7 @@ material = "1.14.0"
 osmdroid = "6.1.20"   # Phase 2 启用;osmdroid 项目已归档,6.1.20 为最终版
 junit = "4.13.2"
 amap3d = "10.0.600"   # Phase 2 启用;maven central 上的最新 release(2026-09 核实)
+amapSearch = "9.7.0"  # POI 搜索;必须与 3dmap 10.0.600 配对(9.7.1 有 utils-core 重复类冲突)
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -17,6 +18,7 @@ material = { group = "com.google.android.material", name = "material", version.r
 osmdroid-android = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
 # 注意:访问器不能以数字开头,所以叫 amap-map 而不是 amap-3dmap
 amap-map = { group = "com.amap.api", name = "3dmap", version.ref = "amap3d" }
+amap-search = { group = "com.amap.api", name = "search", version.ref = "amapSearch" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 
 [plugins]

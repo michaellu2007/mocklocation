@@ -22,8 +22,8 @@ android {
         applicationId = "com.learning.mockrun"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.0.1"
 
         // 高德 key 为空时地图显示空白网格但不崩;key 由用户申请后填入 local.properties
         manifestPlaceholders["amapKey"] = localProps.getProperty("amap_key") ?: ""
@@ -41,6 +41,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // 毛坯 release 直接复用 debug 签名分发(个人使用,不上架),装过 debug 版可平滑覆盖
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 
@@ -59,5 +61,6 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.amap.map)
+    implementation(libs.amap.search)
     testImplementation(libs.junit)
 }
