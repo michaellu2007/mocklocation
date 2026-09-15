@@ -31,6 +31,54 @@
     <string name="mode_custom">自定义</string>
     <string name="btn_draw">绘制路线</string>
     <string name="btn_my">我的路线</string>
+
+    <string name="tab_location">定位</string>
+    <string name="tab_route">路线</string>
+    <string name="tab_library">路线库</string>
+    <string name="tab_settings">信息与设置</string>
+    <string name="tab_location_desc">单点驻留:长按地图或「地图选点」定一个位置,比格会待在那里</string>
+    <string name="library_desc">管理保存的路线;导出的 JSON 可发给作者收录</string>
+    <string name="btn_manage_routes">管理我的路线</string>
+    <string name="settings_engine">地图引擎</string>
+    <string name="settings_auth">模拟位置授权</string>
+    <string name="settings_auth_state">状态:%1$s</string>
+    <string name="settings_version">MockRun v%1$s</string>
+    <string name="settings_about">比格主题 · 更新不强制 · 路线收集计划进行中</string>
+    <string name="settings_maptype">地图类型</string>
+    <string name="maptype_normal">普通</string>
+    <string name="maptype_sat">卫星</string>
+    <string name="settings_coordsys">应用坐标系(手动输入坐标的解析口径)</string>
+    <string name="coord_wgs">WGS-84</string>
+    <string name="coord_gcj">GCJ-02</string>
+    <string name="coord_bd">BD-09</string>
+    <string name="coordsys_desc">手动输入/导入的坐标按此口径解析,注入前自动转成 WGS-84。从高德复制的坐标选 GCJ-02,从百度复制的选 BD-09。</string>
+    <string name="settings_wobble">波动模拟(让轨迹更像真人)</string>
+    <string name="settings_update">版本与更新</string>
+    <string name="btn_check_update">检查更新</string>
+    <string name="btn_apply">定位</string>
+    <string name="hint_lat">纬度 (-90 ~ 90)</string>
+    <string name="hint_lon">经度 (-180 ~ 180)</string>
+    <string name="manual_coord_fmt">手动坐标(解析口径:%1$s)</string>
+    <string name="update_latest">当前 v%1$s 已是最新。本应用保持纯本地、不联网自更新,新版本由作者分发安装包覆盖安装即可。</string>
+    <string name="manual_coord_applied">已定位到输入坐标</string>
+    <string name="manual_coord_invalid">坐标格式不对,检查一下数字</string>
+    <string name="settings_amap_key">高德 Key(个人配置)</string>
+    <string name="amap_key_notice">公告:公共 Key 额度有限,仅供试用。请尽快到 lbs.amap.com 免费申请个人 Key:平台选「Android」,包名填 com.learning.mockrun,SHA1 填下面复制的值,把生成的 Key 粘贴到这里保存。</string>
+    <string name="btn_copy_sha1">复制SHA1</string>
+    <string name="amap_key_hint">粘贴你的高德 Key</string>
+    <string name="btn_save_key">保存Key</string>
+    <string name="key_status_public">当前使用:公共 Key(已启动 %1$d 次,建议尽快配置个人 Key)</string>
+    <string name="key_status_personal">当前使用:你的个人 Key ✓</string>
+    <string name="key_saved">已保存,重启应用后完全生效</string>
+    <string name="sha1_copied">SHA1 已复制到剪贴板</string>
+    <string name="nag_title">请配置你自己的高德 Key</string>
+    <string name="nag_msg">你已使用公共 Key 启动 %1$d 次。公共额度有限,请到「信息与设置 → 高德 Key(个人配置)」按教程免费申请并填入自己的 Key,谢谢配合!</string>
+
+    <string name="eula_title">用户协议与免责声明</string>
+    <string name="eula_agree">同意并继续</string>
+    <string name="eula_decline">不同意并退出</string>
+    <string name="eula_text">MockRun 是一款基于 Android 系统模拟位置(TestProvider)机制的个人学习工具。使用前请务必阅读并理解以下条款:\n\n1. 本应用调用系统开放的 mock_location 接口工作。系统会为注入的位置强制标记 isMock 属性(Android 12+ 由系统置位,无法隐藏),这是正常现象。\n\n2. 本应用仅供定位技术学习、开发调试与娱乐演示,没有任何商业用途。\n\n3. 若你将本应用用于签到打卡、游戏作弊、位置欺骗等违反其他平台规则或法律法规的用途,由此产生的一切后果与法律责任由使用者本人承担,作者不承担任何责任。\n\n4. 微信等部分应用有概率检测模拟位置标记并采取风控措施,请自行了解相关风险。\n\n5. 需要更强隐匿能力(隐藏 isMock、伪造传感器等)者,请移步开源项目 LocationSpoofer,那需要 root 环境。\n\n6. 点击「同意并继续」即视为你已完整阅读、理解并接受上述全部条款;不同意请点击退出,本应用不会以任何形式继续运行。</string>
+
     <string name="hint_longpress">长按地图设置锚点</string>
     <string name="speed_fmt">%1$.1f m/s · 配速 %2$s</string>
     <string name="status_idle">比格待命 · 引擎:%1$s</string>
@@ -43,6 +91,8 @@
     <string name="editor_need_pts">至少需要 2 个途经点</string>
     <string name="btn_undo">撤销</string>
     <string name="btn_clear">清空</string>
+    <string name="btn_add_center">在此处加点</string>
+    <string name="crosshair_coord_fmt">%1$.5f, %2$.5f (WGS-84)</string>
     <string name="btn_save_use">保存并使用</string>
 
     <string name="routes_title">我的路线</string>
@@ -55,8 +105,20 @@
     <string name="routes_delete_confirm">删除「%1$s」?</string>
     <string name="import_failed">导入失败:%1$s</string>
     <string name="act_use">使用</string>
+    <string name="act_share">分享给作者</string>
     <string name="act_export">导出</string>
     <string name="act_delete">删除</string>
+    <string name="routes_share_chooser">分享路线文件</string>
+
+    <string name="search_hint">搜索地名/学校/小区…</string>
+    <string name="search_hint_jump">搜索目的地,飞过去再标点</string>
+    <string name="btn_search">搜索</string>
+    <string name="search_empty_kw">先输入关键字</string>
+    <string name="search_no_result">没搜到,换个词试试</string>
+    <string name="search_result_title">选择地点(共 %1$d 条)</string>
+    <string name="search_picked">已定位:%1$s</string>
+
+    <string name="splash_loading">比格正在醒来…</string>
 
     <string name="notif_channel_name">模拟定位运行状态</string>
     <string name="notif_title">比格正在跑</string>

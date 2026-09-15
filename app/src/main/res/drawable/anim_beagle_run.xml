@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 二帧奔跑循环:原图 ↔ 镜像,配合位移颠簸即成跑步节奏 -->
+<animation-list xmlns:android="http://schemas.android.com/apk/res/android"
+    android:oneshot="false">
+    <item android:drawable="@drawable/beagle_cover" android:duration="180" />
+    <item android:drawable="@drawable/beagle_run_b" android:duration="180" />
+</animation-list>

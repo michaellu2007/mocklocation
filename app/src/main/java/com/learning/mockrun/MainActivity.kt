@@ -1,19 +1,26 @@
 package com.learning.mockrun
 
 import android.Manifest
+import android.animation.Animator
+import android.animation.ObjectAnimator
 import android.app.AppOpsManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.drawable.AnimationDrawable
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.Process
 import android.provider.Settings
+import android.view.View
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.Button
+import android.widget.EditText
+import android.widget.ImageView
 import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.SeekBar
@@ -33,14 +40,14 @@ import com.amap.api.maps.model.Marker
 import com.amap.api.maps.model.MarkerOptions
 import com.amap.api.maps.model.Polyline
 import com.amap.api.maps.model.PolylineOptions
+import com.google.android.material.bottomnavigation.BottomNavigationView
 
 /**
- * 全屏地图 + 底部比格控制卡。
+ * 四 Tab 骨架(对齐参考实现):定位 / 路线 / 路线库 / 信息与设置。
+ * 底层地图共享;底部常驻开跑条(速度+启停)所有 Tab 可见。
  *
- * 坐标系边界(关键):
- * - 内部状态(锚点/路线/注入)一律 WGS-84
- * - 高德地图显示用 GCJ-02,进出地图各做一次转换
- * - 比格标记位置由服务的 currentMotion 驱动(1s tick),并按航向转身
+ * 坐标系边界(关键):内部状态(锚点/路线/注入)一律 WGS-84,
+ * 高德显示是 GCJ-02,进出地图各转换一次。
  */
 class MainActivity : AppCompatActivity() {
 
@@ -50,13 +57,16 @@ class MainActivity : AppCompatActivity() {
     private lateinit var presetLenText: TextView
     private lateinit var presetSpinner: Spinner
     private lateinit var rbModeRoute: RadioButton
-    private lateinit var rbModePoint: RadioButton
     private lateinit var rbModeCustom: RadioButton
     private lateinit var presetRow: android.view.View
     private lateinit var customRow: android.view.View
+    private lateinit var authStatusText: TextView
+    private lateinit var panels: List<android.view.View>
     private lateinit var rbAmap: RadioButton
     private lateinit var rbBaidu: RadioButton
 
+    private var currentTab = TAB_LOCATION
+    private var mapResumed = false
     private var aMap: AMap? = null
     private var beagleMarker: Marker? = null
     private var routePolyline: Polyline? = null
@@ -67,6 +77,13 @@ class MainActivity : AppCompatActivity() {
     private val uiHandler = Handler(Looper.getMainLooper())
     private var feedCount = 0
     private var pendingStart = false
+
+    // 启动加载遮罩(二帧比格奔跑)
+    private lateinit var splashRoot: View
+    private lateinit var splashBeagle: ImageView
+    private var splashBounce: ObjectAnimator? = null
+    private var splashActive = false
+    private val splashTimeoutRunnable = Runnable { hideSplash() }
 
     private val locationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
@@ -98,7 +115,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-    /** 绘制路线 / 我的路线 共用:拿到整条路线(WGS-84)后装填为自定义路线 */
     private val routeResultLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK) {
@@ -110,7 +126,6 @@ class MainActivity : AppCompatActivity() {
                 customRoute = RouteStore.SavedRoute(name, loop, geo)
                 rbModeCustom.isChecked = true
                 updateRoutePreview()
-                // 相机看一眼路线
                 anchor = customRoute?.points?.firstOrNull() ?: anchor
                 anchor?.let {
                     val g = CoordinateConverter.wgs84ToGcj02(it.lat, it.lng)
@@ -156,20 +171,50 @@ class MainActivity : AppCompatActivity() {
         presetLenText = findViewById(R.id.preset_len)
         presetSpinner = findViewById(R.id.preset_spinner)
         presetRow = findViewById(R.id.preset_row)
-        rbModeRoute = findViewById(R.id.rb_mode_route)
-        rbModePoint = findViewById(R.id.rb_mode_point)
-        rbModeCustom = findViewById(R.id.rb_mode_custom)
         customRow = findViewById(R.id.custom_row)
+        rbModeRoute = findViewById(R.id.rb_mode_route)
+        rbModeCustom = findViewById(R.id.rb_mode_custom)
         rbAmap = findViewById(R.id.rb_amap)
         rbBaidu = findViewById(R.id.rb_baidu)
+        authStatusText = findViewById(R.id.set_auth_status)
+        panels = listOf(
+            findViewById(R.id.panel_location),
+            findViewById(R.id.panel_route),
+            findViewById(R.id.panel_library),
+            findViewById(R.id.panel_settings),
+        )
         mapView.onCreate(savedInstanceState)
 
         beagleBitmap = vectorToBitmap(R.drawable.ic_beagle, 128)
 
         setupMap()
+        setupTabs()
         setupControls()
+        setupSettings()
+
+        splashRoot = findViewById(R.id.splash_root)
+        splashBeagle = findViewById(R.id.splash_beagle)
+        startSplash()
+        if (!prefs().getBoolean("eula_accepted", false)) showEulaDialog()
+        maybeShowKeyNag()
 
         anchor?.let { setAnchor(it, animateCamera = false) }
+    }
+
+    /** 首次启动用户协议:不可跳过,不同意即退出 */
+    private fun showEulaDialog() {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(R.string.eula_title)
+            .setMessage(R.string.eula_text)
+            .setCancelable(false)
+            .setPositiveButton(R.string.eula_agree) { d, _ ->
+                prefs().edit().putBoolean("eula_accepted", true).apply()
+                d.dismiss()
+            }
+            .setNegativeButton(R.string.eula_decline) { _, _ ->
+                finish()
+            }
+            .show()
     }
 
     private fun setupMap() {
@@ -182,6 +227,8 @@ class MainActivity : AppCompatActivity() {
             val wgs = CoordinateConverter.gcj02ToWgs84(latLng.latitude, latLng.longitude)
             setAnchor(GeoPoint(wgs.lat, wgs.lng), animateCamera = false)
         }
+        // 地图就绪(瓦片加载完成)即淡出启动页;key 无效等异常由 4s 超时兜底
+        map.setOnMapLoadedListener { hideSplash() }
         val a = anchor
         map.moveCamera(
             CameraUpdateFactory.newLatLngZoom(
@@ -189,6 +236,55 @@ class MainActivity : AppCompatActivity() {
                 16f
             )
         )
+    }
+
+    private fun setupTabs() {
+        val nav = findViewById<BottomNavigationView>(R.id.bottom_nav)
+        nav.setOnItemSelectedListener { item ->
+            currentTab = when (item.itemId) {
+                R.id.nav_route -> TAB_ROUTE
+                R.id.nav_library -> TAB_LIBRARY
+                R.id.nav_settings -> TAB_SETTINGS
+                else -> TAB_LOCATION
+            }
+            showTab(currentTab)
+            true
+        }
+        // 返回键:非定位 Tab 时回到定位页(参考实现同款行为),定位页才退出
+        onBackPressedDispatcher.addCallback(
+            this,
+            object : androidx.activity.OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    if (currentTab != TAB_LOCATION) {
+                        nav.selectedItemId = R.id.nav_location
+                    } else {
+                        finish()
+                    }
+                }
+            }
+        )
+        showTab(TAB_LOCATION)
+    }
+
+    private fun showTab(tab: Int) {
+        currentTab = tab
+        val mapVisible = isMapTab()
+        // 库/设置是独立整页:地图、提示、开跑条全部隐藏,只留底部导航
+        mapView.visibility = if (mapVisible) View.VISIBLE else View.GONE
+        findViewById<View>(R.id.hint_top).visibility = if (mapVisible) View.VISIBLE else View.GONE
+        findViewById<View>(R.id.running_bar).visibility = if (mapVisible) View.VISIBLE else View.GONE
+        panels.forEachIndexed { i, v -> v.visibility = if (i == tab) View.VISIBLE else View.GONE }
+        if (tab == TAB_SETTINGS) refreshAuthStatus()
+        setMapResumed(mapVisible)
+    }
+
+    private fun isMapTab() = currentTab == TAB_LOCATION || currentTab == TAB_ROUTE
+
+    /** 地图不可见时挂起渲染,省电省内存;恢复可见时唤醒 */
+    private fun setMapResumed(resume: Boolean) {
+        if (mapResumed == resume) return
+        mapResumed = resume
+        if (resume) mapView.onResume() else mapView.onPause()
     }
 
     private fun setupControls() {
@@ -227,6 +323,29 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btn_my).setOnClickListener {
             routeResultLauncher.launch(Intent(this, SavedRoutesActivity::class.java))
         }
+        findViewById<Button>(R.id.lib_manage).setOnClickListener {
+            routeResultLauncher.launch(Intent(this, SavedRoutesActivity::class.java))
+        }
+        findViewById<Button>(R.id.lib_draw).setOnClickListener {
+            routeResultLauncher.launch(Intent(this, RouteEditorActivity::class.java))
+        }
+
+        findViewById<Button>(R.id.loc_pick).setOnClickListener { openPicker() }
+        findViewById<Button>(R.id.btn_search).setOnClickListener {
+            val kw = findViewById<EditText>(R.id.search_input).text.toString()
+            if (kw.isBlank()) {
+                Toast.makeText(this, R.string.search_empty_kw, Toast.LENGTH_SHORT).show()
+            } else {
+                doPoiSearch(kw) { item ->
+                    val wgs = CoordinateConverter.gcj02ToWgs84(item.latLonPoint.latitude, item.latLonPoint.longitude)
+                    setAnchor(GeoPoint(wgs.lat, wgs.lng), animateCamera = true)
+                    Toast.makeText(this, getString(R.string.search_picked, item.title), Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+        findViewById<Button>(R.id.btn_open_dev).setOnClickListener {
+            startActivity(Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS))
+        }
 
         val seek = findViewById<SeekBar>(R.id.speed_seek)
         seek.progress = 30 // 3.0 m/s
@@ -240,11 +359,6 @@ class MainActivity : AppCompatActivity() {
         })
         updateSpeedLabel()
 
-        findViewById<Button>(R.id.btn_pick).setOnClickListener { openPicker() }
-        statusText.setOnClickListener {
-            // 状态栏兼做授权入口:未授权时点这里直达开发者选项
-            startActivity(Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS))
-        }
         findViewById<Button>(R.id.btn_start).setOnClickListener { startMock() }
         findViewById<Button>(R.id.btn_stop).setOnClickListener {
             MockLocationService.stop(this)
@@ -253,6 +367,7 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.toast_stopped, Toast.LENGTH_SHORT).show()
         }
         refreshIdleStatus()
+        refreshVersion()
     }
 
     private fun setupBeagleMarker(gcj: LatLng) {
@@ -285,7 +400,6 @@ class MainActivity : AppCompatActivity() {
             return
         }
         val a = anchor ?: return
-        if (!rbModeRoute.isChecked) return
         val preset = PresetRoutes.ALL.getOrNull(presetSpinner.selectedItemPosition) ?: return
         presetLenText.text = "~${preset.lengthM}m"
         drawRouteOnMap(PresetRoutes.generate(preset, a))
@@ -313,6 +427,174 @@ class MainActivity : AppCompatActivity() {
         pickerLauncher.launch(Intent(this, AMapPickerActivity::class.java))
     }
 
+    /** POI 搜索:关键字 → 结果列表 → 选中即设为锚点 */
+    private fun doPoiSearch(keyword: String, onPick: (com.amap.api.services.core.PoiItem) -> Unit) {
+        PoiSearchHelper.ensurePrivacy(this)
+        PoiSearchHelper.search(this, keyword) { pois ->
+            runOnUiThread {
+                if (pois.isEmpty()) {
+                    Toast.makeText(this, R.string.search_no_result, Toast.LENGTH_SHORT).show()
+                    return@runOnUiThread
+                }
+                val titles = pois.map { "${it.title} · ${it.snippet}" }
+                androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle(getString(R.string.search_result_title, pois.size))
+                    .setItems(titles.toTypedArray()) { _, which -> onPick(pois[which]) }
+                    .show()
+            }
+        }
+    }
+
+    /** 第四 Tab:软件配置(地图类型/坐标系/波动)与版本更新,全部本地持久化 */
+    private fun setupSettings() {
+        val prefs = prefs()
+        val rbNormal = findViewById<RadioButton>(R.id.rb_map_normal)
+        val rbSat = findViewById<RadioButton>(R.id.rb_map_sat)
+        val rbWgs = findViewById<RadioButton>(R.id.rb_coord_wgs)
+        val rbGcj = findViewById<RadioButton>(R.id.rb_coord_gcj)
+        val rdBd = findViewById<RadioButton>(R.id.rb_coord_bd)
+        val wobbleSwitch = findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.wobble_switch)
+
+        when (prefs.getString("map_type", "normal")) {
+            "satellite" -> rbSat.isChecked = true
+            else -> rbNormal.isChecked = true
+        }
+        applyMapType()
+        findViewById<RadioGroup>(R.id.maptype_group).setOnCheckedChangeListener { _, id ->
+            prefs.edit().putString("map_type", if (id == R.id.rb_map_sat) "satellite" else "normal").apply()
+            applyMapType()
+        }
+
+        when (prefs.getString("coord_sys", "WGS84")) {
+            "GCJ02" -> rbGcj.isChecked = true
+            "BD09" -> rdBd.isChecked = true
+            else -> rbWgs.isChecked = true
+        }
+        findViewById<RadioGroup>(R.id.coord_group).setOnCheckedChangeListener { _, id ->
+            val sys = when (id) {
+                R.id.rb_coord_gcj -> "GCJ02"
+                R.id.rb_coord_bd -> "BD09"
+                else -> "WGS84"
+            }
+            prefs.edit().putString("coord_sys", sys).apply()
+            refreshManualLabel()
+        }
+
+        wobbleSwitch.isChecked = prefs.getBoolean("wobble", true)
+        wobbleSwitch.setOnCheckedChangeListener { _, checked ->
+            prefs.edit().putBoolean("wobble", checked).apply()
+        }
+
+        findViewById<Button>(R.id.btn_check_update).setOnClickListener {
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(getString(R.string.settings_update))
+                .setMessage(getString(R.string.update_latest, currentVersion()))
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+        }
+
+        findViewById<Button>(R.id.btn_apply_coord).setOnClickListener { applyManualCoord() }
+        refreshManualLabel()
+        setupAmapKeySection()
+    }
+
+    /** 高德个人 Key 区块:显示包名+本机SHA1,保存用户Key,公共额度状态 */
+    private fun setupAmapKeySection() {
+        val prefs = prefs()
+        findViewById<TextView>(R.id.sha1_value).text = apkSha1()
+        findViewById<TextView>(R.id.key_status).text =
+            if (hasUserAmapKey()) getString(R.string.key_status_personal)
+            else getString(R.string.key_status_public, prefs.getInt("launch_count", 0))
+        findViewById<EditText>(R.id.user_amap_key_input).setText(prefs.getString("user_amap_key", ""))
+
+        findViewById<Button>(R.id.btn_copy_sha1).setOnClickListener {
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("SHA1", apkSha1()))
+            Toast.makeText(this, R.string.sha1_copied, Toast.LENGTH_SHORT).show()
+        }
+        findViewById<Button>(R.id.btn_save_key).setOnClickListener {
+            val key = findViewById<EditText>(R.id.user_amap_key_input).text.toString().trim()
+            prefs.edit().putString("user_amap_key", key).apply()
+            runCatching {
+                MapsInitializer.setApiKey(key)
+                com.amap.api.services.core.ServiceSettings.getInstance().setApiKey(key)
+            }
+            refreshKeyStatus()
+            Toast.makeText(this, R.string.key_saved, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun hasUserAmapKey() = !prefs().getString("user_amap_key", "").isNullOrBlank()
+
+    private fun refreshKeyStatus() {
+        findViewById<TextView>(R.id.key_status).text =
+            if (hasUserAmapKey()) getString(R.string.key_status_personal)
+            else getString(R.string.key_status_public, prefs().getInt("launch_count", 0))
+    }
+
+    /** 本机 APK 签名的 SHA1(用户去高德申请 Key 时要填的就是它) */
+    private fun apkSha1(): String = runCatching {
+        @Suppress("DEPRECATION")
+        val sig = packageManager.getPackageInfo(packageName, PackageManager.GET_SIGNATURES).signatures!!.first()
+        java.security.MessageDigest.getInstance("SHA1").digest(sig.toByteArray())
+            .joinToString(":") { "%02X".format(it) }
+    }.getOrDefault("获取失败")
+
+    /** 公共 Key 公告:启动超过 10 次仍未配置个人 Key 时,每次启动温和提醒 */
+    private fun maybeShowKeyNag() {
+        val prefs = prefs()
+        if (hasUserAmapKey()) return
+        val count = prefs.getInt("launch_count", 0)
+        if (count <= 10) return
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(R.string.nag_title)
+            .setMessage(getString(R.string.nag_msg, count))
+            .setPositiveButton(R.string.btn_open_dev) { _, _ ->
+                currentTab = TAB_SETTINGS
+                findViewById<BottomNavigationView>(R.id.bottom_nav).selectedItemId = R.id.nav_settings
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun prefs() = getSharedPreferences("settings", Context.MODE_PRIVATE)
+
+    private fun applyMapType() {
+        val sat = prefs().getString("map_type", "normal") == "satellite"
+        aMap?.mapType = if (sat) AMap.MAP_TYPE_SATELLITE else AMap.MAP_TYPE_NORMAL
+    }
+
+    /** 手动输入坐标:按用户选择的口径解析,统一转 WGS-84 */
+    private fun applyManualCoord() {
+        val lat = findViewById<EditText>(R.id.input_man_lat).text.toString().toDoubleOrNull()
+        val lng = findViewById<EditText>(R.id.input_man_lng).text.toString().toDoubleOrNull()
+        if (lat == null || lng == null || lat !in -90.0..90.0 || lng !in -180.0..180.0) {
+            Toast.makeText(this, R.string.manual_coord_invalid, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val wgs: GeoPoint = when (prefs().getString("coord_sys", "WGS84")) {
+            "GCJ02" -> CoordinateConverter.gcj02ToWgs84(lat, lng).let { GeoPoint(it.lat, it.lng) }
+            "BD09" -> CoordinateConverter.bd09ToWgs84(lat, lng).let { GeoPoint(it.lat, it.lng) }
+            else -> GeoPoint(lat, lng)
+        }
+        setAnchor(GeoPoint(wgs.lat, wgs.lng), animateCamera = true)
+        Toast.makeText(this, R.string.manual_coord_applied, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun refreshManualLabel() {
+        val sys = when (prefs().getString("coord_sys", "WGS84")) {
+            "GCJ02" -> "GCJ-02(高德)"
+            "BD09" -> "BD-09(百度)"
+            else -> "WGS-84"
+        }
+        findViewById<TextView>(R.id.manual_coord_label).text = getString(R.string.manual_coord_fmt, sys)
+    }
+
+    private fun currentVersion(): String = runCatching {
+        @Suppress("DEPRECATION")
+        packageManager.getPackageInfo(packageName, 0).versionName
+    }.getOrNull() ?: "?"
+
     private fun startMock() {
         if (!isMockLocationAllowed()) {
             Toast.makeText(this, R.string.toast_need_auth, Toast.LENGTH_LONG).show()
@@ -332,18 +614,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun doStart() {
-        val customMode = rbModeCustom.isChecked
-        val routeMode = rbModeRoute.isChecked
+        // 定位 Tab = 单点驻留;路线 Tab = 预设环线或自定义;库/设置 Tab 沿用路线语义
+        val pointMode = currentTab == TAB_LOCATION
+        val customMode = currentTab == TAB_ROUTE && rbModeCustom.isChecked
 
-        // 自定义模式的坐标来自路线本身,不依赖锚点
         var a: GeoPoint? = anchor
-        if (!customMode && a == null) {
+        if (!pointMode && !customMode && a == null) {
             a = aMap?.cameraPosition?.target?.let {
                 val wgs = CoordinateConverter.gcj02ToWgs84(it.latitude, it.longitude)
                 GeoPoint(wgs.lat, wgs.lng).also { p -> setAnchor(p, animateCamera = false) }
             }
         }
-        if (!customMode && a == null) {
+        if (pointMode && a == null) {
             Toast.makeText(this, R.string.toast_pick_first, Toast.LENGTH_SHORT).show()
             return
         }
@@ -363,15 +645,16 @@ class MainActivity : AppCompatActivity() {
                 name = r.name
                 route = r.points
             }
-            routeMode -> {
-                name = preset.label
-                route = PresetRoutes.generate(preset, anchorPoint!!)
-            }
-            else -> {
+            pointMode -> {
                 name = getString(R.string.notif_default_name)
                 route = listOf(anchorPoint!!)
             }
+            else -> {
+                name = preset.label
+                route = PresetRoutes.generate(preset, anchorPoint!!)
+            }
         }
+
         val pts = DoubleArray(route.size * 2)
         route.forEachIndexed { i, p ->
             pts[i * 2] = p.lat
@@ -379,7 +662,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         feedCount = 0
-        MockLocationService.start(this, name, speedMps(), pts)
+        MockLocationService.start(this, name, speedMps(), pts, wobble = prefs().getBoolean("wobble", true))
         Toast.makeText(this, R.string.toast_started, Toast.LENGTH_SHORT).show()
         stopTicker()
         uiHandler.post(ticker)
@@ -401,13 +684,26 @@ class MainActivity : AppCompatActivity() {
         statusText.text = getString(R.string.status_idle, MapEngine.load(this).displayName)
     }
 
+    private fun refreshAuthStatus() {
+        val ok = isMockLocationAllowed()
+        authStatusText.text = getString(
+            R.string.settings_auth_state,
+            if (ok) "已授权" else "未授权"
+        )
+    }
+
+    private fun refreshVersion() {
+        findViewById<TextView>(R.id.set_version).text = getString(R.string.settings_version, currentVersion())
+    }
+
     private fun stopTicker() {
         uiHandler.removeCallbacks(ticker)
     }
 
     override fun onResume() {
         super.onResume()
-        mapView.onResume()
+        refreshAuthStatus()
+        if (isMapTab()) setMapResumed(true)
         if (MockLocationService.currentMotion != null) {
             stopTicker()
             uiHandler.post(ticker)
@@ -415,7 +711,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
-        mapView.onPause()
+        if (isMapTab()) setMapResumed(false)
         stopTicker()
         super.onPause()
     }
@@ -485,7 +781,41 @@ class MainActivity : AppCompatActivity() {
         return bmp
     }
 
+    /** 二帧奔跑动画:帧循环(原图↔镜像) + 纵向颠簸 */
+    private fun startSplash() {
+        splashActive = true
+        splashBeagle.setBackgroundResource(R.drawable.anim_beagle_run)
+        (splashBeagle.background as? AnimationDrawable)?.start()
+        splashBounce = ObjectAnimator.ofFloat(splashBeagle, View.TRANSLATION_Y, 0f, -30f).apply {
+            duration = 240
+            repeatCount = ObjectAnimator.INFINITE
+            repeatMode = ObjectAnimator.REVERSE
+            interpolator = AccelerateDecelerateInterpolator()
+            start()
+        }
+        uiHandler.postDelayed(splashTimeoutRunnable, SPLASH_MAX_MS)
+    }
+
+    private fun hideSplash() {
+        if (!splashActive) return
+        splashActive = false
+        uiHandler.removeCallbacks(splashTimeoutRunnable)
+        splashBounce?.cancel()
+        splashBounce = null
+        (splashBeagle.background as? AnimationDrawable)?.stop()
+        splashRoot.animate()
+            .alpha(0f)
+            .setDuration(350)
+            .withEndAction { splashRoot.visibility = View.GONE }
+            .start()
+    }
+
     companion object {
         private const val TICK_MS = 1000L
+        private const val SPLASH_MAX_MS = 4000L
+        private const val TAB_LOCATION = 0
+        private const val TAB_ROUTE = 1
+        private const val TAB_LIBRARY = 2
+        private const val TAB_SETTINGS = 3
     }
 }

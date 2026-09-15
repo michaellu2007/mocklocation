@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 自适应图标前景:原图收缩进安全区(内容只占中间 ~64%),避免圆角蒙版裁到耳朵和腿 -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/beagle_cover"
+    android:insetLeft="18%"
+    android:insetTop="18%"
+    android:insetRight="18%"
+    android:insetBottom="18%" />
