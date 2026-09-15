@@ -485,6 +485,31 @@
                     android:layout_marginTop="8dp"
                     android:text="@string/btn_pick" />
 
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btn_fav_add"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:text="@string/btn_fav_add" />
+
+                    <Button
+                        android:id="@+id/btn_fav_list"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:layout_weight="1"
+                        android:text="@string/btn_fav_list" />
+                </LinearLayout>
+
                 <TextView
                     android:id="@+id/manual_coord_label"
                     android:layout_width="wrap_content"

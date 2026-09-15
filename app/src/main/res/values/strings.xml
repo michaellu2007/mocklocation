@@ -21,6 +21,14 @@
     <string name="engine_amap">高德</string>
     <string name="engine_baidu">百度</string>
     <string name="btn_pick">地图选点</string>
+    <string name="btn_fav_add">收藏此位置</string>
+    <string name="btn_fav_list">我的收藏</string>
+    <string name="fav_title">我的收藏</string>
+    <string name="fav_saved">已收藏:%1$s</string>
+    <string name="fav_none">还没有收藏,先「收藏此位置」吧</string>
+    <string name="fav_item_fmt">%1$s\n%2$s, %3$s</string>
+    <string name="fav_act_goto">定位过去</string>
+    <string name="fav_deleted">已删除:%1$s</string>
     <string name="btn_confirm_pick">确认选点</string>
     <string name="amap_hint_tap">点击地图放置标记</string>
     <string name="amap_marker_title">选点</string>

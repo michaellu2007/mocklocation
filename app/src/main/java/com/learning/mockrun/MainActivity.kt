@@ -331,6 +331,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         findViewById<Button>(R.id.loc_pick).setOnClickListener { openPicker() }
+        findViewById<Button>(R.id.btn_fav_add).setOnClickListener { addFavorite() }
+        findViewById<Button>(R.id.btn_fav_list).setOnClickListener { showFavoritesDialog() }
         findViewById<Button>(R.id.btn_search).setOnClickListener {
             val kw = findViewById<EditText>(R.id.search_input).text.toString()
             if (kw.isBlank()) {
@@ -425,6 +427,57 @@ class MainActivity : AppCompatActivity() {
             return
         }
         pickerLauncher.launch(Intent(this, AMapPickerActivity::class.java))
+    }
+
+    /** 收藏当前位置:优先锚点,否则取图中心。同名覆盖 */
+    private fun addFavorite() {
+        val point = anchor
+            ?: aMap?.cameraPosition?.target?.let {
+                val wgs = CoordinateConverter.gcj02ToWgs84(it.latitude, it.longitude)
+                GeoPoint(wgs.lat, wgs.lng)
+            }
+        if (point == null) {
+            Toast.makeText(this, R.string.toast_pick_first, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val name = "收藏 " + java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.getDefault())
+            .format(java.util.Date())
+        FavoriteStore.add(this, FavoriteStore.Favorite(name, point.lat, point.lng, System.currentTimeMillis()))
+        Toast.makeText(this, getString(R.string.fav_saved, name), Toast.LENGTH_SHORT).show()
+    }
+
+    /** 我的收藏:列表 → 定位过去 / 删除 */
+    private fun showFavoritesDialog() {
+        val favorites = FavoriteStore.list(this)
+        if (favorites.isEmpty()) {
+            Toast.makeText(this, R.string.fav_none, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val titles = favorites.map {
+            getString(R.string.fav_item_fmt, it.name, "%.5f".format(it.lat), "%.5f".format(it.lng))
+        }
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(R.string.fav_title)
+            .setItems(titles.toTypedArray()) { _, which ->
+                val fav = favorites[which]
+                val actions = arrayOf(getString(R.string.fav_act_goto), getString(R.string.act_delete))
+                androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle(fav.name)
+                    .setItems(actions) { _, w ->
+                        when (w) {
+                            0 -> {
+                                setAnchor(GeoPoint(fav.lat, fav.lng), animateCamera = true)
+                                Toast.makeText(this, getString(R.string.search_picked, fav.name), Toast.LENGTH_SHORT).show()
+                            }
+                            1 -> {
+                                FavoriteStore.remove(this, fav.name)
+                                Toast.makeText(this, getString(R.string.fav_deleted, fav.name), Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                    .show()
+            }
+            .show()
     }
 
     /** POI 搜索:关键字 → 结果列表 → 选中即设为锚点 */
