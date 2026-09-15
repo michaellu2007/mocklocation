@@ -21,6 +21,7 @@ import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
+import android.widget.ListView
 import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.SeekBar
@@ -260,11 +261,13 @@ class MainActivity : AppCompatActivity() {
     private fun showTab(tab: Int) {
         currentTab = tab
         val mapVisible = isMapTab()
-        // 库/设置是独立整页:地图、提示、开跑条全部隐藏,只留底部导航
+        // 库/设置是独立整页:地图、提示、搜索卡、开跑条全部隐藏,只留底部导航
         mapView.visibility = if (mapVisible) View.VISIBLE else View.GONE
         mapCrosshair.visibility = if (tab == TAB_LOCATION) View.VISIBLE else View.GONE
         findViewById<View>(R.id.hint_top).visibility = if (mapVisible) View.VISIBLE else View.GONE
-        findViewById<View>(R.id.running_bar).visibility = if (mapVisible) View.VISIBLE else View.GONE
+        findViewById<View>(R.id.search_card).visibility = if (tab == TAB_LOCATION) View.VISIBLE else View.GONE
+        // 开跑条(速度/启停)只在路线 Tab 需要;定位 Tab 用「应用定位」
+        findViewById<View>(R.id.running_bar).visibility = if (tab == TAB_ROUTE) View.VISIBLE else View.GONE
         panels.forEachIndexed { i, v -> v.visibility = if (i == tab) View.VISIBLE else View.GONE }
         if (tab == TAB_SETTINGS) refreshAuthStatus()
         setMapResumed(mapVisible)
@@ -303,19 +306,29 @@ class MainActivity : AppCompatActivity() {
             routeResultLauncher.launch(Intent(this, RouteEditorActivity::class.java))
         }
 
-        findViewById<Button>(R.id.loc_pick).setOnClickListener { openPicker() }
+        findViewById<Button>(R.id.btn_apply_location).setOnClickListener { doStart() }
         findViewById<Button>(R.id.btn_fav_add).setOnClickListener { addFavorite() }
         findViewById<Button>(R.id.btn_fav_list).setOnClickListener { showFavoritesDialog() }
-        findViewById<Button>(R.id.btn_search).setOnClickListener {
-            val kw = findViewById<EditText>(R.id.search_input).text.toString()
+        val searchInput = findViewById<EditText>(R.id.search_input)
+        fun runSearch() {
+            val kw = searchInput.text.toString()
             if (kw.isBlank()) {
                 Toast.makeText(this, R.string.search_empty_kw, Toast.LENGTH_SHORT).show()
+                return
+            }
+            doPoiSearch(kw) { item ->
+                val wgs = CoordinateConverter.gcj02ToWgs84(item.latLonPoint.latitude, item.latLonPoint.longitude)
+                setAnchor(GeoPoint(wgs.lat, wgs.lng), animateCamera = true)
+                Toast.makeText(this, getString(R.string.search_picked, item.title), Toast.LENGTH_SHORT).show()
+            }
+        }
+        findViewById<Button>(R.id.btn_search).setOnClickListener { runSearch() }
+        searchInput.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) {
+                runSearch()
+                true
             } else {
-                doPoiSearch(kw) { item ->
-                    val wgs = CoordinateConverter.gcj02ToWgs84(item.latLonPoint.latitude, item.latLonPoint.longitude)
-                    setAnchor(GeoPoint(wgs.lat, wgs.lng), animateCamera = true)
-                    Toast.makeText(this, getString(R.string.search_picked, item.title), Toast.LENGTH_SHORT).show()
-                }
+                false
             }
         }
         findViewById<Button>(R.id.btn_open_dev).setOnClickListener {
@@ -462,21 +475,35 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** POI 搜索:关键字 → 结果列表 → 选中即设为锚点 */
+    /** POI 搜索:结果内联展开在搜索卡下方(学参考项目),点击即选 */
     private fun doPoiSearch(keyword: String, onPick: (com.amap.api.services.core.PoiItem) -> Unit) {
         PoiSearchHelper.ensurePrivacy(this)
         PoiSearchHelper.search(this, keyword) { pois ->
             runOnUiThread {
+                val lv = findViewById<ListView>(R.id.search_results)
                 if (pois.isEmpty()) {
+                    lv.visibility = View.GONE
                     Toast.makeText(this, R.string.search_no_result, Toast.LENGTH_SHORT).show()
                     return@runOnUiThread
                 }
-                val titles = pois.map { "${it.title} · ${it.snippet}" }
-                androidx.appcompat.app.AlertDialog.Builder(this)
-                    .setTitle(getString(R.string.search_result_title, pois.size))
-                    .setItems(titles.toTypedArray()) { _, which -> onPick(pois[which]) }
-                    .show()
+                lv.adapter = android.widget.ArrayAdapter(
+                    this,
+                    android.R.layout.simple_list_item_1,
+                    pois.take(8).map { "${it.title} · ${it.snippet}" }
+                )
+                lv.setOnItemClickListener { _, _, pos, _ ->
+                    lv.visibility = View.GONE
+                    hideSearchKeyboard()
+                    onPick(pois[pos])
+                }
+                lv.visibility = View.VISIBLE
             }
         }
+    }
+
+    private fun hideSearchKeyboard() {
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+        imm.hideSoftInputFromWindow(findViewById<EditText>(R.id.search_input).windowToken, 0)
     }
 
     /** 第四 Tab:软件配置(地图类型/坐标系/波动)与版本更新,全部本地持久化 */
