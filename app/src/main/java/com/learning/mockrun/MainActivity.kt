@@ -119,6 +119,7 @@ class MainActivity : AppCompatActivity() {
                 val loop = data.getBooleanExtra(PickerContract.EXTRA_ROUTE_LOOP, true)
                 val geo = pts.toList().chunked(2).map { GeoPoint(it[0], it[1]) }
                 customRoute = RouteStore.SavedRoute(name, loop, geo)
+                prefs().edit().putString("last_route", RouteStore.encode(customRoute!!)).apply()
                 updateRoutePreview()
                 anchor = customRoute?.points?.firstOrNull() ?: anchor
                 anchor?.let {
@@ -158,6 +159,10 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         anchor = loadAnchor()
+        // 自动恢复上次使用的自定义路线(重启不丢)
+        prefs().getString("last_route", null)?.let { s ->
+            RouteStore.parseRoute(s)?.let { customRoute = it }
+        }
 
         mapView = findViewById(R.id.map_view)
         mapCrosshair = findViewById(R.id.map_crosshair)

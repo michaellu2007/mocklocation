@@ -61,10 +61,18 @@ class RouteEditorActivity : AppCompatActivity() {
                 16f
             )
         )
-        // 点图加点(精细) + 准星坐标读数随平移刷新
-        map.setOnMapClickListener { latLng ->
-            val wgs = CoordinateConverter.gcj02ToWgs84(latLng.latitude, latLng.longitude)
-            addPoint(GeoPoint(wgs.lat, wgs.lng))
+        // 只允许「＋」按钮加点(触屏误触不再产生点);草稿自动恢复
+        val draft = prefs().getString("editor_draft", null)
+        if (draft != null) {
+            RouteStore.parseRoute(draft)?.let { d ->
+                d.points.forEach { pts.add(it) }
+                loopCheck.isChecked = d.loop
+            }
+        }
+        if (pts.isNotEmpty()) {
+            // 有草稿:相机先飞回草稿起点继续画
+            val g = CoordinateConverter.wgs84ToGcj02(pts.first().lat, pts.first().lng)
+            map.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(g.lat, g.lng), 16f))
         }
         map.setOnCameraChangeListener(object : AMap.OnCameraChangeListener {
             override fun onCameraChange(pos: com.amap.api.maps.model.CameraPosition?) {
@@ -134,6 +142,7 @@ class RouteEditorActivity : AppCompatActivity() {
     }
 
     private fun updatePreview() {
+        persistDraft()
         polyline?.remove()
         polyline = null
         markers.forEach { it.remove() }
@@ -180,6 +189,19 @@ class RouteEditorActivity : AppCompatActivity() {
             getString(R.string.crosshair_coord_fmt, wgs.lat, wgs.lng)
     }
 
+    /** 草稿随画随存:误触返回/切走都不丢点 */
+    private fun persistDraft() {
+        if (pts.isEmpty()) {
+            prefs().edit().remove("editor_draft").apply()
+        } else {
+            prefs().edit()
+                .putString("editor_draft", RouteStore.encode(RouteStore.SavedRoute("draft", loopCheck.isChecked, pts)))
+                .apply()
+        }
+    }
+
+    private fun prefs() = getSharedPreferences("settings", MODE_PRIVATE)
+
     /** 序号圆点徽章:彩底白字,比格主题配色 */
     private fun badgeBitmap(text: String, bgColor: Int): Bitmap {
         val size = 96
@@ -215,6 +237,7 @@ class RouteEditorActivity : AppCompatActivity() {
         val loop = loopCheck.isChecked
         val name = "路线 " + SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date())
         RouteStore.add(this, RouteStore.SavedRoute(name, loop, ArrayList(pts)))
+        prefs().edit().remove("editor_draft").apply()
 
         val arr = DoubleArray(pts.size * 2)
         pts.forEachIndexed { i, p ->
