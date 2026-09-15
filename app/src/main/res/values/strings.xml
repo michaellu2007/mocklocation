@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">MockRun</string>
+    <string name="app_name">beagleincampus</string>
 
     <string name="phase1_status">包名:%1$s\n模拟位置授权:%2$s</string>
     <string name="btn_open_dev">去开发者选项授权</string>
@@ -50,7 +50,7 @@
     <string name="settings_engine">地图引擎</string>
     <string name="settings_auth">模拟位置授权</string>
     <string name="settings_auth_state">状态:%1$s</string>
-    <string name="settings_version">MockRun v%1$s</string>
+    <string name="settings_version">beagleincampus v%1$s</string>
     <string name="settings_about">比格主题 · 更新不强制 · 路线收集计划进行中</string>
     <string name="settings_maptype">地图类型</string>
     <string name="maptype_normal">普通</string>
@@ -99,7 +99,7 @@
     <string name="eula_title">用户协议与免责声明</string>
     <string name="eula_agree">同意并继续</string>
     <string name="eula_decline">不同意并退出</string>
-    <string name="eula_text">MockRun 是一款基于 Android 系统模拟位置(TestProvider)机制的个人学习工具。使用前请务必阅读并理解以下条款:\n\n1. 本应用调用系统开放的 mock_location 接口工作。系统会为注入的位置强制标记 isMock 属性(Android 12+ 由系统置位,无法隐藏),这是正常现象。\n\n2. 本应用仅供定位技术学习、开发调试与娱乐演示,没有任何商业用途。\n\n3. 若你将本应用用于签到打卡、游戏作弊、位置欺骗等违反其他平台规则或法律法规的用途,由此产生的一切后果与法律责任由使用者本人承担,作者不承担任何责任。\n\n4. 微信等部分应用有概率检测模拟位置标记并采取风控措施,请自行了解相关风险。\n\n5. 需要更强隐匿能力(隐藏 isMock、伪造传感器等)者,请移步开源项目 LocationSpoofer,那需要 root 环境。\n\n6. 点击「同意并继续」即视为你已完整阅读、理解并接受上述全部条款;不同意请点击退出,本应用不会以任何形式继续运行。</string>
+    <string name="eula_text">beagleincampus 是一款基于 Android 系统模拟位置(TestProvider)机制的个人学习工具。使用前请务必阅读并理解以下条款:\n\n1. 本应用调用系统开放的 mock_location 接口工作。系统会为注入的位置强制标记 isMock 属性(Android 12+ 由系统置位,无法隐藏),这是正常现象。\n\n2. 本应用仅供定位技术学习、开发调试与娱乐演示,没有任何商业用途。\n\n3. 若你将本应用用于签到打卡、游戏作弊、位置欺骗等违反其他平台规则或法律法规的用途,由此产生的一切后果与法律责任由使用者本人承担,作者不承担任何责任。\n\n4. 微信等部分应用有概率检测模拟位置标记并采取风控措施,请自行了解相关风险。\n\n5. 需要更强隐匿能力(隐藏 isMock、伪造传感器等)者,请移步开源项目 LocationSpoofer,那需要 root 环境。\n\n6. 点击「同意并继续」即视为你已完整阅读、理解并接受上述全部条款;不同意请点击退出,本应用不会以任何形式继续运行。</string>
 
     <string name="hint_longpress">拖动地图,把中心圆点对准要模拟的位置</string>
     <string name="hint_center">定位中心点</string>
