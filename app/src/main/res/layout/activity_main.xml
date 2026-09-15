@@ -682,6 +682,7 @@
             </LinearLayout>
 
             <!-- 常驻开跑条 -->
+        </FrameLayout>
             <LinearLayout
                 android:id="@+id/running_bar"
                 android:layout_width="match_parent"
@@ -748,7 +749,6 @@
                 android:layout_height="wrap_content"
                 app:menu="@menu/bottom_nav"
                 app:labelVisibilityMode="labeled" />
-        </FrameLayout>
     </LinearLayout>
 
     <!-- 启动加载遮罩:二帧比格奔跑动画,地图就绪后淡出(根层,盖住含导航的全部) -->

@@ -271,6 +271,8 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.search_card).visibility = if (tab == TAB_LOCATION) View.VISIBLE else View.GONE
         // 开跑条(速度/启停)只在路线 Tab 需要;定位 Tab 用「应用定位」
         findViewById<View>(R.id.running_bar).visibility = if (tab == TAB_ROUTE) View.VISIBLE else View.GONE
+        // 进入路线页时重画当前路线(重启后自动恢复的那条也会显示)
+        if (tab == TAB_ROUTE) updateRoutePreview()
         panels.forEachIndexed { i, v -> v.visibility = if (i == tab) View.VISIBLE else View.GONE }
         if (tab == TAB_SETTINGS) refreshAuthStatus()
         setMapResumed(mapVisible)
@@ -422,14 +424,17 @@ class MainActivity : AppCompatActivity() {
             val g = CoordinateConverter.wgs84ToGcj02(it.lat, it.lng)
             LatLng(g.lat, g.lng)
         }
-        // 导航风格:绿底白箭头纹理沿线平铺(随行进方向旋转),粗线更醒目
-        routePolyline = aMap?.addPolyline(
-            PolylineOptions()
-                .addAll(gcjPts)
-                .setCustomTexture(BitmapDescriptorFactory.fromAsset("route_arrow_texture.png"))
-                .setUseTexture(true)
-                .width(26f)
-        )
+        // 导航风格:绿底白箭头纹理沿线平铺(随行进方向旋转);纹理加载失败时退回纯色,绝不隐形
+        val opts = PolylineOptions().addAll(gcjPts).width(26f)
+        val tex = runCatching {
+            BitmapDescriptorFactory.fromAsset("route_arrow_texture.png")
+        }.getOrNull()
+        if (tex != null) {
+            opts.setCustomTexture(tex).setUseTexture(true)
+        } else {
+            opts.color(0xFF00C853.toInt())
+        }
+        routePolyline = aMap?.addPolyline(opts)
     }
 
     private fun openPicker() {
@@ -883,6 +888,7 @@ class MainActivity : AppCompatActivity() {
             pts[i * 2 + 1] = p.lng
         }
         feedCount = 0
+        drawRouteOnMap(r.points)   // 开跑瞬间把路线画上屏,不依赖切换页面的时机
         MockLocationService.start(this, r.name, speedMps(), pts, wobble = prefs().getBoolean("wobble", true))
         Toast.makeText(this, R.string.toast_started, Toast.LENGTH_SHORT).show()
         stopTicker()
