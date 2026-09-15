@@ -10,3 +10,6 @@ build/
 .kotlin/
 .zcode/
 local.properties
+PLAN.md
+AGENTS.md
+release/
