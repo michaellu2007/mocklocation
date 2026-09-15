@@ -11,6 +11,15 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <!-- 定位Tab:屏幕中心圆点,拖动地图即把圆点对准目标 -->
+    <ImageView
+        android:id="@+id/map_crosshair"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_gravity="center"
+        android:contentDescription="@string/hint_center"
+        android:src="@drawable/ic_crosshair"
+        android:visibility="gone" />
     <TextView
         android:id="@+id/hint_top"
         android:layout_width="wrap_content"
@@ -551,7 +560,7 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- 路线:环线/自定义 -->
+            <!-- 路线:自定义路线开跑(预设环线已移除) -->
             <LinearLayout
                 android:id="@+id/panel_route"
                 android:layout_width="match_parent"
@@ -561,57 +570,17 @@
                 android:padding="16dp"
                 android:visibility="gone">
 
-                <RadioGroup
-                    android:id="@+id/mode_group"
+                <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                    <RadioButton
-                        android:id="@+id/rb_mode_route"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checked="true"
-                        android:text="@string/mode_route"
-                        android:textSize="14sp" />
-
-                    <RadioButton
-                        android:id="@+id/rb_mode_custom"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="16dp"
-                        android:text="@string/mode_custom"
-                        android:textSize="14sp" />
-                </RadioGroup>
+                    android:text="@string/panel_route_hint"
+                    android:textSize="13sp" />
 
                 <LinearLayout
-                    android:id="@+id/preset_row"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:gravity="center_vertical"
+                    android:layout_marginTop="8dp"
                     android:orientation="horizontal">
-
-                    <Spinner
-                        android:id="@+id/preset_spinner"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1" />
-
-                    <TextView
-                        android:id="@+id/preset_len"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textSize="13sp" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/custom_row"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:orientation="horizontal"
-                    android:visibility="gone">
 
                     <Button
                         android:id="@+id/btn_draw"

@@ -24,7 +24,6 @@ import android.widget.ImageView
 import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.SeekBar
-import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -54,16 +53,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mapView: TextureMapView
     private lateinit var statusText: TextView
     private lateinit var speedLabel: TextView
-    private lateinit var presetLenText: TextView
-    private lateinit var presetSpinner: Spinner
-    private lateinit var rbModeRoute: RadioButton
-    private lateinit var rbModeCustom: RadioButton
-    private lateinit var presetRow: android.view.View
-    private lateinit var customRow: android.view.View
     private lateinit var authStatusText: TextView
     private lateinit var panels: List<android.view.View>
     private lateinit var rbAmap: RadioButton
     private lateinit var rbBaidu: RadioButton
+    private lateinit var mapCrosshair: View
 
     private var currentTab = TAB_LOCATION
     private var mapResumed = false
@@ -124,7 +118,6 @@ class MainActivity : AppCompatActivity() {
                 val loop = data.getBooleanExtra(PickerContract.EXTRA_ROUTE_LOOP, true)
                 val geo = pts.toList().chunked(2).map { GeoPoint(it[0], it[1]) }
                 customRoute = RouteStore.SavedRoute(name, loop, geo)
-                rbModeCustom.isChecked = true
                 updateRoutePreview()
                 anchor = customRoute?.points?.firstOrNull() ?: anchor
                 anchor?.let {
@@ -166,14 +159,9 @@ class MainActivity : AppCompatActivity() {
         anchor = loadAnchor()
 
         mapView = findViewById(R.id.map_view)
+        mapCrosshair = findViewById(R.id.map_crosshair)
         statusText = findViewById(R.id.status_text)
         speedLabel = findViewById(R.id.speed_label)
-        presetLenText = findViewById(R.id.preset_len)
-        presetSpinner = findViewById(R.id.preset_spinner)
-        presetRow = findViewById(R.id.preset_row)
-        customRow = findViewById(R.id.custom_row)
-        rbModeRoute = findViewById(R.id.rb_mode_route)
-        rbModeCustom = findViewById(R.id.rb_mode_custom)
         rbAmap = findViewById(R.id.rb_amap)
         rbBaidu = findViewById(R.id.rb_baidu)
         authStatusText = findViewById(R.id.set_auth_status)
@@ -223,12 +211,15 @@ class MainActivity : AppCompatActivity() {
         map.uiSettings.isZoomControlsEnabled = false
         map.uiSettings.isCompassEnabled = false
         map.uiSettings.isMyLocationButtonEnabled = false
-        map.setOnMapLongClickListener { latLng ->
-            val wgs = CoordinateConverter.gcj02ToWgs84(latLng.latitude, latLng.longitude)
-            setAnchor(GeoPoint(wgs.lat, wgs.lng), animateCamera = false)
-        }
         // 地图就绪(瓦片加载完成)即淡出启动页;key 无效等异常由 4s 超时兜底
         map.setOnMapLoadedListener { hideSplash() }
+        // 定位Tab:拖到哪就模拟到哪——相机停稳后,锚点自动取屏幕中心圆点处
+        map.setOnCameraChangeListener(object : AMap.OnCameraChangeListener {
+            override fun onCameraChange(pos: com.amap.api.maps.model.CameraPosition?) {}
+            override fun onCameraChangeFinish(pos: com.amap.api.maps.model.CameraPosition?) {
+                if (currentTab == TAB_LOCATION) updateAnchorFromCenter()
+            }
+        })
         val a = anchor
         map.moveCamera(
             CameraUpdateFactory.newLatLngZoom(
@@ -271,6 +262,7 @@ class MainActivity : AppCompatActivity() {
         val mapVisible = isMapTab()
         // 库/设置是独立整页:地图、提示、开跑条全部隐藏,只留底部导航
         mapView.visibility = if (mapVisible) View.VISIBLE else View.GONE
+        mapCrosshair.visibility = if (tab == TAB_LOCATION) View.VISIBLE else View.GONE
         findViewById<View>(R.id.hint_top).visibility = if (mapVisible) View.VISIBLE else View.GONE
         findViewById<View>(R.id.running_bar).visibility = if (mapVisible) View.VISIBLE else View.GONE
         panels.forEachIndexed { i, v -> v.visibility = if (i == tab) View.VISIBLE else View.GONE }
@@ -296,25 +288,6 @@ class MainActivity : AppCompatActivity() {
             val engine = if (checkedId == R.id.rb_baidu) MapEngine.BAIDU else MapEngine.AMAP
             MapEngine.save(this, engine)
             Toast.makeText(this, getString(R.string.toast_engine_switched, engine.displayName), Toast.LENGTH_SHORT).show()
-        }
-
-        presetSpinner.adapter = android.widget.ArrayAdapter(
-            this,
-            android.R.layout.simple_spinner_dropdown_item,
-            PresetRoutes.ALL.map { it.label }
-        )
-        presetSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(p: android.widget.AdapterView<*>?, v: android.view.View?, pos: Int, id: Long) {
-                updateRoutePreview()
-            }
-
-            override fun onNothingSelected(p: android.widget.AdapterView<*>?) {}
-        }
-
-        findViewById<RadioGroup>(R.id.mode_group).setOnCheckedChangeListener { _, _ ->
-            presetRow.visibility = if (rbModeRoute.isChecked) android.view.View.VISIBLE else android.view.View.GONE
-            customRow.visibility = if (rbModeCustom.isChecked) android.view.View.VISIBLE else android.view.View.GONE
-            updateRoutePreview()
         }
 
         findViewById<Button>(R.id.btn_draw).setOnClickListener {
@@ -393,18 +366,26 @@ class MainActivity : AppCompatActivity() {
         updateRoutePreview()
     }
 
+    /** 屏幕中心圆点处 = 新锚点(仅定位Tab使用) */
+    private fun updateAnchorFromCenter() {
+        val target = aMap?.cameraPosition?.target ?: return
+        val wgs = CoordinateConverter.gcj02ToWgs84(target.latitude, target.longitude)
+        val p = GeoPoint(wgs.lat, wgs.lng)
+        if (anchor == null || RoutePlayer.haversine(anchor!!, p) > 0.5) {
+            anchor = p
+            saveAnchor(p)
+            val gcj = CoordinateConverter.wgs84ToGcj02(p.lat, p.lng)
+            val latLng = LatLng(gcj.lat, gcj.lng)
+            if (beagleMarker == null) setupBeagleMarker(latLng) else beagleMarker?.position = latLng
+        }
+    }
+
     private fun updateRoutePreview() {
         routePolyline?.remove()
         routePolyline = null
-        if (rbModeCustom.isChecked) {
-            val r = customRoute ?: return
-            drawRouteOnMap(r.points)
-            return
-        }
-        val a = anchor ?: return
-        val preset = PresetRoutes.ALL.getOrNull(presetSpinner.selectedItemPosition) ?: return
-        presetLenText.text = "~${preset.lengthM}m"
-        drawRouteOnMap(PresetRoutes.generate(preset, a))
+        if (currentTab != TAB_ROUTE) return
+        val r = customRoute ?: return
+        drawRouteOnMap(r.points)
     }
 
     private fun drawRouteOnMap(route: List<GeoPoint>) {
@@ -415,8 +396,8 @@ class MainActivity : AppCompatActivity() {
         routePolyline = aMap?.addPolyline(
             PolylineOptions()
                 .addAll(gcjPts)
-                .color(0xCC8B5E3C.toInt())
-                .width(10f)
+                .color(0xFF00C853.toInt())
+                .width(14f)
         )
     }
 
@@ -715,45 +696,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun doStart() {
-        // 定位 Tab = 单点驻留;路线 Tab = 预设环线或自定义;库/设置 Tab 沿用路线语义
-        val pointMode = currentTab == TAB_LOCATION
-        val customMode = currentTab == TAB_ROUTE && rbModeCustom.isChecked
-
-        var a: GeoPoint? = anchor
-        if (!pointMode && !customMode && a == null) {
-            a = aMap?.cameraPosition?.target?.let {
-                val wgs = CoordinateConverter.gcj02ToWgs84(it.latitude, it.longitude)
-                GeoPoint(wgs.lat, wgs.lng).also { p -> setAnchor(p, animateCamera = false) }
-            }
-        }
-        if (pointMode && a == null) {
-            Toast.makeText(this, R.string.toast_pick_first, Toast.LENGTH_SHORT).show()
-            return
-        }
-        val anchorPoint = a
-
-        val preset = PresetRoutes.ALL.getOrNull(presetSpinner.selectedItemPosition) ?: PresetRoutes.ALL[0]
-
+        // 定位 Tab = 屏幕中心圆点处驻留;路线 Tab = 自定义路线回放
         val name: String
         val route: List<GeoPoint>
-        when {
-            customMode -> {
-                val r = customRoute
-                if (r == null) {
-                    Toast.makeText(this, R.string.toast_no_custom_route, Toast.LENGTH_SHORT).show()
-                    return
-                }
-                name = r.name
-                route = r.points
+        if (currentTab == TAB_LOCATION) {
+            updateAnchorFromCenter()
+            val a = anchor ?: run {
+                Toast.makeText(this, R.string.toast_pick_first, Toast.LENGTH_SHORT).show()
+                return
             }
-            pointMode -> {
-                name = getString(R.string.notif_default_name)
-                route = listOf(anchorPoint!!)
+            name = getString(R.string.notif_default_name)
+            route = listOf(a)
+        } else {
+            val r = customRoute
+            if (r == null) {
+                Toast.makeText(this, R.string.toast_no_custom_route, Toast.LENGTH_SHORT).show()
+                return
             }
-            else -> {
-                name = preset.label
-                route = PresetRoutes.generate(preset, anchorPoint!!)
-            }
+            name = r.name
+            route = r.points
         }
 
         val pts = DoubleArray(route.size * 2)

@@ -100,7 +100,9 @@
     <string name="eula_decline">不同意并退出</string>
     <string name="eula_text">MockRun 是一款基于 Android 系统模拟位置(TestProvider)机制的个人学习工具。使用前请务必阅读并理解以下条款:\n\n1. 本应用调用系统开放的 mock_location 接口工作。系统会为注入的位置强制标记 isMock 属性(Android 12+ 由系统置位,无法隐藏),这是正常现象。\n\n2. 本应用仅供定位技术学习、开发调试与娱乐演示,没有任何商业用途。\n\n3. 若你将本应用用于签到打卡、游戏作弊、位置欺骗等违反其他平台规则或法律法规的用途,由此产生的一切后果与法律责任由使用者本人承担,作者不承担任何责任。\n\n4. 微信等部分应用有概率检测模拟位置标记并采取风控措施,请自行了解相关风险。\n\n5. 需要更强隐匿能力(隐藏 isMock、伪造传感器等)者,请移步开源项目 LocationSpoofer,那需要 root 环境。\n\n6. 点击「同意并继续」即视为你已完整阅读、理解并接受上述全部条款;不同意请点击退出,本应用不会以任何形式继续运行。</string>
 
-    <string name="hint_longpress">长按地图设置锚点</string>
+    <string name="hint_longpress">拖动地图,把中心圆点对准要模拟的位置</string>
+    <string name="hint_center">定位中心点</string>
+    <string name="panel_route_hint">先「绘制路线」或从「我的路线」选一条,绿色即为预览;点开跑后比格沿路线跑</string>
     <string name="speed_fmt">%1$.1f m/s · 配速 %2$s</string>
     <string name="status_idle">比格待命 · 引擎:%1$s</string>
     <string name="status_running">%1$s · %2$.1f m/s · 已喂 %3$d 点</string>
