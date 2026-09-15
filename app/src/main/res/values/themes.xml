@@ -1,14 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 定死 Light:亮橘主题不随系统深色模式漂移 -->
-    <style name="Theme.MockRun" parent="Theme.Material3.Light.NoActionBar">
-        <item name="colorPrimary">@color/brand_orange</item>
-        <item name="colorOnPrimary">@color/on_orange</item>
-        <item name="colorPrimaryContainer">@color/orange_container</item>
-        <item name="colorOnPrimaryContainer">@color/on_orange_container</item>
-        <item name="colorSecondary">@color/brand_orange</item>
-        <item name="colorSecondaryContainer">@color/orange_container</item>
-        <item name="colorOnSecondaryContainer">@color/on_orange_container</item>
-        <item name="android:windowBackground">@color/brand_orange</item>
+    <!-- 主题保持默认(紫系,深浅随系统),仅全局背景铺淡紫 -->
+    <style name="Theme.MockRun" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/bg_lavender</item>
     </style>
 </resources>
