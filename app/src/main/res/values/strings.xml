@@ -62,6 +62,13 @@
     <string name="coordsys_desc">手动输入/导入的坐标按此口径解析,注入前自动转成 WGS-84。从高德复制的坐标选 GCJ-02,从百度复制的选 BD-09。</string>
     <string name="settings_wobble">波动模拟(让轨迹更像真人)</string>
     <string name="settings_update">版本与更新</string>
+    <string name="update_checking">正在检查更新…</string>
+    <string name="update_none">当前 v%1$s 已是最新</string>
+    <string name="update_failed_title">检查更新失败</string>
+    <string name="update_failed">原因:%1$s(需要能访问 GitHub,国内网络可能不稳定)</string>
+    <string name="update_available_title">发现新版本 v%1$s</string>
+    <string name="update_goto_page">将打开发布页,下载新 APK 覆盖安装即可(更新不强制)</string>
+    <string name="btn_goto_download">前往下载</string>
     <string name="btn_check_update">检查更新</string>
     <string name="btn_apply">定位</string>
     <string name="btn_apply_location">应用定位</string>

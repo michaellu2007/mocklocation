@@ -9,6 +9,8 @@ val localProps = Properties().apply {
     val f = rootProject.file("local.properties")
     if (f.exists()) f.inputStream().use { load(it) }
 }
+// 发布仓库(GitHub Releases 在线检查更新用): local.properties 填 github_repo=用户名/仓库名,留空则检查更新按钮走纯本地文案
+val githubRepo = localProps.getProperty("github_repo") ?: ""
 
 android {
     namespace = "com.learning.mockrun"
@@ -24,6 +26,9 @@ android {
         targetSdk = 36
         versionCode = 2
         versionName = "0.0.1"
+
+        // 检查更新的发布仓库(GitHub Releases);留空 = 检查更新按钮走纯本地文案
+        buildConfigField("String", "GITHUB_REPO", "\"$githubRepo\"")
 
         // 高德 key 为空时地图显示空白网格但不崩;key 由用户申请后填入 local.properties
         manifestPlaceholders["amapKey"] = localProps.getProperty("amap_key") ?: ""

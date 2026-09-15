@@ -551,11 +551,54 @@ class MainActivity : AppCompatActivity() {
         }
 
         findViewById<Button>(R.id.btn_check_update).setOnClickListener {
-            androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle(getString(R.string.settings_update))
-                .setMessage(getString(R.string.update_latest, currentVersion()))
-                .setPositiveButton(android.R.string.ok, null)
-                .show()
+            val version = currentVersion()
+            val repo = BuildConfig.GITHUB_REPO
+            if (repo.isBlank()) {
+                // 作者尚未配置发布仓库:保持纯本地文案
+                androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle(getString(R.string.settings_update))
+                    .setMessage(getString(R.string.update_latest, version))
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show()
+                return@setOnClickListener
+            }
+            Toast.makeText(this, R.string.update_checking, Toast.LENGTH_SHORT).show()
+            UpdateChecker.check(repo, version) { result ->
+                runOnUiThread {
+                    when {
+                        !result.ok ->
+                            androidx.appcompat.app.AlertDialog.Builder(this)
+                                .setTitle(R.string.update_failed_title)
+                                .setMessage(getString(R.string.update_failed, result.error ?: ""))
+                                .setPositiveButton(android.R.string.ok, null)
+                                .show()
+                        result.hasUpdate -> {
+                            val notes = result.notes.take(400)
+                            androidx.appcompat.app.AlertDialog.Builder(this)
+                                .setTitle(getString(R.string.update_available_title, result.latestVersion))
+                                .setMessage(
+                                    if (notes.isBlank()) getString(R.string.update_goto_page)
+                                    else notes + "\n\n" + getString(R.string.update_goto_page)
+                                )
+                                .setPositiveButton(R.string.btn_goto_download) { _, _ ->
+                                    runCatching {
+                                        startActivity(
+                                            Intent(Intent.ACTION_VIEW, Uri.parse(result.apkUrl.ifBlank { result.releasesUrl }))
+                                        )
+                                    }
+                                }
+                                .setNegativeButton(android.R.string.cancel, null)
+                                .show()
+                        }
+                        else ->
+                            androidx.appcompat.app.AlertDialog.Builder(this)
+                                .setTitle(getString(R.string.settings_update))
+                                .setMessage(getString(R.string.update_none, version))
+                                .setPositiveButton(android.R.string.ok, null)
+                                .show()
+                    }
+                }
+            }
         }
 
         findViewById<Button>(R.id.btn_apply_coord).setOnClickListener { applyManualCoord() }
