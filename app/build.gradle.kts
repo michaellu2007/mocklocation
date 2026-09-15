@@ -46,6 +46,10 @@ android {
         }
     }
 
+    buildFeatures {
+        buildConfig = true   // release 强制 Key 门禁需要 BuildConfig.DEBUG 区分构建类型
+    }
+
     lint {
         // ACCESS_MOCK_LOCATION 是系统 signature 级权限,声明它是模拟定位应用的常规做法,
         // lint 的 ProtectedPermissions 检查会报 error,这里显式关掉。

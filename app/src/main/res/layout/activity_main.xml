@@ -335,10 +335,45 @@
             android:text="@string/amap_key_notice"
             android:textSize="11sp" />
 
+        <Button
+            android:id="@+id/btn_open_amap"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:paddingStart="0dp"
+            android:paddingEnd="0dp"
+            android:text="@string/btn_open_amap"
+            android:textSize="12sp" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/pkg_value"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/app_package_name"
+                android:textIsSelectable="true"
+                android:textSize="11sp"
+                android:typeface="monospace" />
+
+            <Button
+                android:id="@+id/btn_copy_pkg"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/btn_copy_pkg" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 

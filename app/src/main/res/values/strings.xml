@@ -72,7 +72,14 @@
     <string name="manual_coord_applied">已定位到输入坐标</string>
     <string name="manual_coord_invalid">坐标格式不对,检查一下数字</string>
     <string name="settings_amap_key">高德 Key(个人配置)</string>
-    <string name="amap_key_notice">公告:公共 Key 额度有限,仅供试用。请尽快到 lbs.amap.com 免费申请个人 Key:平台选「Android」,包名填 com.learning.mockrun,SHA1 填下面复制的值,把生成的 Key 粘贴到这里保存。</string>
+    <string name="amap_key_notice">公告:公共 Key 额度有限,仅供试用。请尽快到高德开放平台免费申请个人 Key:平台选「Android」,包名与 SHA1 用下面两栏一键复制,把生成的 Key 粘贴到这里保存。</string>
+    <string name="btn_open_amap">前往高德开放平台 lbs.amap.com »</string>
+    <string name="btn_copy_pkg">复制包名</string>
+    <string name="app_package_name">包名: com.learning.mockrun</string>
+    <string name="pkg_copied">包名已复制到剪贴板</string>
+    <string name="key_quota_title">公共配额已耗尽,请配置您的高德 Key</string>
+    <string name="key_quota_msg">公共试用配额(Quota)已耗尽:地图渲染与检索请求将被服务端拒绝,本应用无法继续提供地图服务。\n\n解决步骤(免费,约 2 分钟):\n1. 点击下方「去配置 Key」,进入高德 Key 配置页;\n2. 点击「前往高德开放平台」注册并创建应用,平台选择「Android」;\n3. 包名与签名 SHA1 使用本页一键复制的值;\n4. 将生成的 Key 粘贴到输入框并保存,重启应用即恢复服务。\n\n本应用不内置无限额度的服务凭据,感谢理解与配合。</string>
+    <string name="quota_goto_config">去配置 Key</string>
     <string name="btn_copy_sha1">复制SHA1</string>
     <string name="amap_key_hint">粘贴你的高德 Key</string>
     <string name="btn_save_key">保存Key</string>

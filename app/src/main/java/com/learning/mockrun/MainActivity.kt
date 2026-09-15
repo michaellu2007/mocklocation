@@ -10,6 +10,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.AnimationDrawable
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -610,7 +611,7 @@ class MainActivity : AppCompatActivity() {
         startActivity(Intent.createChooser(intent, getString(R.string.diag_shared)))
     }
 
-    /** 高德个人 Key 区块:显示包名+本机SHA1,保存用户Key,公共额度状态 */
+    /** 高德个人 Key 区块:显示包名+本机SHA1(均可复制),保存用户Key,公共额度状态 */
     private fun setupAmapKeySection() {
         val prefs = prefs()
         findViewById<TextView>(R.id.sha1_value).text = apkSha1()
@@ -619,10 +620,21 @@ class MainActivity : AppCompatActivity() {
             else getString(R.string.key_status_public, prefs.getInt("launch_count", 0))
         findViewById<EditText>(R.id.user_amap_key_input).setText(prefs.getString("user_amap_key", ""))
 
-        findViewById<Button>(R.id.btn_copy_sha1).setOnClickListener {
+        fun copyToClipboard(label: String, value: String) {
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("SHA1", apkSha1()))
-            Toast.makeText(this, R.string.sha1_copied, Toast.LENGTH_SHORT).show()
+            clipboard.setPrimaryClip(android.content.ClipData.newPlainText(label, value))
+            Toast.makeText(this, getString(R.string.sha1_copied), Toast.LENGTH_SHORT).show()
+        }
+        findViewById<Button>(R.id.btn_copy_sha1).setOnClickListener {
+            copyToClipboard("SHA1", apkSha1())
+        }
+        findViewById<Button>(R.id.btn_copy_pkg).setOnClickListener {
+            copyToClipboard("package", packageName)
+        }
+        findViewById<Button>(R.id.btn_open_amap).setOnClickListener {
+            runCatching {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://lbs.amap.com")))
+            }
         }
         findViewById<Button>(R.id.btn_save_key).setOnClickListener {
             val key = findViewById<EditText>(R.id.user_amap_key_input).text.toString().trim()
@@ -652,21 +664,44 @@ class MainActivity : AppCompatActivity() {
             .joinToString(":") { "%02X".format(it) }
     }.getOrDefault("获取失败")
 
-    /** 公共 Key 公告:启动超过 10 次仍未配置个人 Key 时,每次启动温和提醒 */
+    /** 公共 Key 额度策略:
+     *  debug 构建:超 10 次温和提醒,不设限——开发阶段图省事
+     *  release 构建:超 10 次强制门禁,启动与开跑都会被拦截,直到配置个人 Key */
     private fun maybeShowKeyNag() {
-        val prefs = prefs()
         if (hasUserAmapKey()) return
-        val count = prefs.getInt("launch_count", 0)
+        val count = prefs().getInt("launch_count", 0)
         if (count <= 10) return
+        if (quotaBlocked()) {
+            showKeyQuotaDialog()
+        } else {
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(R.string.nag_title)
+                .setMessage(getString(R.string.nag_msg, count))
+                .setPositiveButton(R.string.btn_open_dev) { _, _ -> goConfigTab() }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }
+    }
+
+    /** release 构建 + 未配置个人 Key + 启动超 10 次 = 功能拦截 */
+    private fun quotaBlocked(): Boolean =
+        !BuildConfig.DEBUG && !hasUserAmapKey() && prefs().getInt("launch_count", 0) > 10
+
+    private fun showKeyQuotaDialog() {
         androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle(R.string.nag_title)
-            .setMessage(getString(R.string.nag_msg, count))
-            .setPositiveButton(R.string.btn_open_dev) { _, _ ->
-                currentTab = TAB_SETTINGS
-                findViewById<BottomNavigationView>(R.id.bottom_nav).selectedItemId = R.id.nav_settings
+            .setTitle(R.string.key_quota_title)
+            .setMessage(getString(R.string.key_quota_msg))
+            .setCancelable(false)
+            .setPositiveButton(R.string.quota_goto_config) { d, _ ->
+                d.dismiss()
+                goConfigTab()
             }
-            .setNegativeButton(android.R.string.cancel, null)
             .show()
+    }
+
+    private fun goConfigTab() {
+        currentTab = TAB_SETTINGS
+        findViewById<BottomNavigationView>(R.id.bottom_nav).selectedItemId = R.id.nav_settings
     }
 
     private fun prefs() = getSharedPreferences("settings", Context.MODE_PRIVATE)
@@ -726,6 +761,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun doStart() {
+        // release 版公共额度门禁:未配置个人 Key 时拦截(专业口径见弹窗文案)
+        if (quotaBlocked()) {
+            showKeyQuotaDialog()
+            return
+        }
         // 定位 Tab = 屏幕中心圆点处驻留;路线 Tab = 自定义路线回放
         val name: String
         val route: List<GeoPoint>
