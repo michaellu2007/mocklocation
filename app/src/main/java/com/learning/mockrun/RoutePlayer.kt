@@ -24,13 +24,16 @@ data class MockMotion(
 /**
  * 轨迹回放引擎。
  *
- * 数学模型(参考公开的 GPS 噪声建模方法,按推模型重写):
- * - 位置: 沿折线按 baseSpeed×elapsed 匀速推进;闭合环线取模循环,开线往返
- * - 漂移: Ornstein-Uhlenbeck 随机游走
- *     X(t+dt) = X(t) + sigma*sqrt(dt)*N(0,1) - alpha*X(t)*dt
- *   高斯白噪声频谱均匀,FFT 检测不出单频峰;均值回归项(0.05/s)模拟真实 GPS
- *   滤波器把异常漂移拉回,使偏移有界
- * - 步频横向抖动: 每步 ~0.15m 高斯偏移,垂直于前进方向
+ * 双通道分离(参考实现同款):
+ * - 注入/传输(at()): 交给系统 test provider 的位置 = 干净基准 + 有界扰动
+ * - 自家显示(cleanMotion()): 纯净理想轨迹,零噪声
+ *
+ * 数学模型:
+ * - 位置: 沿折线按 baseSpeed×elapsed 匀速推进;闭合环线取模循环,开线往返;stopAtEnd 跑完即停
+ * - 扰动: 有界 Ornstein-Uhlenbeck(照抄参考实现 hook 层)
+ *     X(t+dt) = clamp( X(t) + sigma*sqrt(dt)*N(0,1) - alpha*X(t)*dt )
+ *   只叠加在输出上,永不反馈进里程/位置状态,所以不存在误差累计跑偏
+ * - 步频横向抖动: 每步 ~0.15m 高斯偏移,垂直于前进方向(可单独关闭)
  * - Accuracy/Altitude/速度: 独立的小幅高斯漂移,消除固定常数的机器痕迹
  *
  * 推模型契约: 服务每个喂点周期调一次 at(),传入 SystemClock.elapsedRealtimeNanos()
@@ -43,6 +46,10 @@ class RoutePlayer(
     private val wobble: Boolean = true,
     /** 用户勾选的环线开关: true=强制按闭环循环(首尾间缺口自动补一段),false=开线往返 */
     private val loopClosed: Boolean? = null,
+    /** 跑完暂停: true=到达终点(环线=回到起点)后停在原地;false=循环/往返不停 */
+    private val stopAtEnd: Boolean = false,
+    /** 步幅横向抖动(参考实现 enableJitter 默认开,此处拆成独立开关) */
+    private val stepJitter: Boolean = true,
     seed: Long = System.nanoTime(),
 ) {
     private val rng = Random(seed)
@@ -90,9 +97,19 @@ class RoutePlayer(
         }
     }
 
+    /** 最近一次 at() 的无噪声基准位置 */
+    private var lastClean: MockMotion? = null
+
+    /**
+     * 理想轨迹位置(零漂移零抖动),自家 UI 回放显示用。
+     * 参考实现同款分离:App 自己地图上是干净插值,噪声只叠加在交给外部 App 的定位上。
+     */
+    fun cleanMotion(): MockMotion? = lastClean
+
     /** 当前时刻的运动状态 */
     fun at(elapsedRealtimeNanos: Long): MockMotion {
         if (staticPoint != null) {
+            lastClean = MockMotion(staticPoint.lat, staticPoint.lng, 0f, 0f, 5f, 10.0)
             val n = advanceNoise(elapsedRealtimeNanos, moving = false, bearingDeg = 0f)
             return MockMotion(
                 lat = staticPoint.lat + n.dLatDeg,
@@ -103,6 +120,18 @@ class RoutePlayer(
         }
 
         val dist = advanceDistance(elapsedRealtimeNanos)
+        // 跑完暂停: 停在终点(环线=回到起点),速度归零,漂移继续让点"活着"
+        if (stopAtEnd && dist >= totalLengthM) {
+            val end = if (closedLoop) pts.first() else pts.last()
+            lastClean = MockMotion(end.lat, end.lng, 0f, 0f, 5f, 10.0)
+            val n = advanceNoise(elapsedRealtimeNanos, moving = false, bearingDeg = 0f)
+            return MockMotion(
+                lat = end.lat + n.dLatDeg,
+                lng = end.lng + n.dLngDeg,
+                bearingDeg = 0f, speedMps = 0f,
+                accuracyM = n.accuracy, altitudeM = n.altitude,
+            )
+        }
         val cycleLen = if (closedLoop) totalLengthM else totalLengthM * 2
         val distInCycle = if (cycleLen > 0) dist % cycleLen else 0.0
         val forward = closedLoop || distInCycle <= totalLengthM
@@ -117,6 +146,11 @@ class RoutePlayer(
         val lat = from.lat + (to.lat - from.lat) * ratio
         val lng = from.lng + (to.lng - from.lng) * ratio
         val bearing = (if (forward) bearingDeg(from, to) else bearingDeg(to, from)).toFloat()
+        lastClean = MockMotion(
+            lat = lat, lng = lng, bearingDeg = bearing,
+            speedMps = (if (paused) 0.0 else currentSpeedMps).toFloat(),
+            accuracyM = 5f, altitudeM = 10.0,
+        )
 
         val n = advanceNoise(elapsedRealtimeNanos, moving = true, bearingDeg = bearing)
         return MockMotion(
@@ -172,13 +206,17 @@ class RoutePlayer(
         return currentSpeedMps * dtSec
     }
 
-    // ---- 噪声状态(OU 过程) ----
-    private var driftLatM = 0.0
-    private var driftLngM = 0.0
+    // ---- 噪声状态(有界 OU;单位=度,数值照抄参考实现 hook 层 xposed/utils/CoordinateConverter) ----
+    private var driftLatDeg = 0.0
+    private var driftLngDeg = 0.0
     private var accuracyDrift = 0.0
     private var altitudeDrift = 0.0
     private var speedOu = 0.0
     private var lastNanos = 0L
+
+    /** 路线所在纬度(米↔度换算用;路线都是局部小范围,取首点足够) */
+    private val latRadRef: Double
+        get() = Math.toRadians((pts.firstOrNull() ?: staticPoint)?.lat ?: 39.9)
 
     private class Noise(val dLatDeg: Double, val dLngDeg: Double, val speed: Float, val accuracy: Float, val altitude: Double)
 
@@ -189,57 +227,45 @@ class RoutePlayer(
         if (!wobble) {
             return Noise(0.0, 0.0, (if (moving && !paused) currentSpeedMps else 0.0).toFloat(), 5f, 10.0)
         }
-        // OU 漂移:直接以"稳态标准差"为目标参数化。
-        // 稳态 Var = sigma^2/(2*alpha),故 sigma = driftStd * sqrt(2*alpha);
-        // 参考 App 的参数(alpha=0.05, 漂移半径5~8m)稳态游走 std≈5~8m、峰值±20m,
-        // 在我们 1Hz 喂点的地图标记上观感过野,实测后收敛到下述数值。
-        val sigma = driftStdM * sqrt(2 * TUNING.alpha)
-        val alpha = TUNING.alpha
-        driftLatM += sigma * sqrt(dt) * rng.nextGaussian() - alpha * driftLatM * dt
-        driftLngM += sigma * sqrt(dt) * rng.nextGaussian() - alpha * driftLngM * dt
 
-        // 步频横向抖动: 垂直于前进方向的小步偏移
-        var lateralM = 0.0
-        if (moving && currentSpeedMps > 0.3) lateralM = TUNING.stepLateralM * rng.nextGaussian()
-        val br = Math.toRadians(bearingDeg.toDouble())
-        val perpLatM = lateralM * cos(br + PI / 2)
-        val perpLngM = lateralM * sin(br + PI / 2)
+        // 抄 hook 层原样: sigma=0.000002°(≈0.2m),alpha=0.05 每秒拉回 5%,硬钳 ±0.00004°(≈±4.4m)。
+        // 扰动只叠加在输出上且始终有界;里程/位置推进(advanceDistance)完全不碰噪声,不会累计跑偏。
+        val sigma = 0.000002
+        val alpha = 0.05
+        driftLatDeg = (driftLatDeg + sigma * sqrt(dt) * rng.nextGaussian() - alpha * driftLatDeg * dt)
+            .coerceIn(-0.00004, 0.00004)
+        driftLngDeg = (driftLngDeg + sigma * sqrt(dt) * rng.nextGaussian() - alpha * driftLngDeg * dt)
+            .coerceIn(-0.00004, 0.00004)
 
-        val latDeg = metersToDegLat(driftLatM + perpLatM)
-        val lngDeg = metersToDegLng(driftLngM + perpLngM, Math.toRadians(latDeg))
+        // 步频横向抖动: 垂直于前进方向的小步偏移(用户可单独关掉)
+        var dLatDeg = driftLatDeg
+        var dLngDeg = driftLngDeg
+        if (stepJitter && moving && currentSpeedMps > 0.3) {
+            val lateralM = TUNING.stepLateralM * rng.nextGaussian()
+            val br = Math.toRadians(bearingDeg.toDouble())
+            dLatDeg += metersToDegLat(lateralM * cos(br + PI / 2))
+            dLngDeg += metersToDegLng(lateralM * sin(br + PI / 2), latRadRef)
+        }
 
         // 速度小幅波动: 真实跑者的瞬时速度不是常数(暂停时速度必须归零,漂移仍可继续)
         val movingNow = moving && !paused
         speedOu += TUNING.speedOuStep * rng.nextGaussian() - TUNING.speedOuAlpha * speedOu
         val speed = (if (movingNow) currentSpeedMps + speedOu else 0.0).coerceAtLeast(0.0)
 
-        // Accuracy: GDOP 缓慢变化,基准 = 2×漂移std+3,限 [2,50]
-        accuracyDrift += 0.3 * rng.nextGaussian() - 0.02 * accuracyDrift
-        val accuracy = (driftStdM * 2 + 3.0 + accuracyDrift).coerceIn(2.0, 50.0).toFloat()
+        // Accuracy: 抄 hook 层 getJitteredAccuracy — 2.2m 基准微弱起伏,对外呈"满格强信号"
+        accuracyDrift += 0.1 * rng.nextGaussian() - 0.05 * accuracyDrift
+        val accuracy = (2.2 + accuracyDrift).coerceIn(1.5, 3.5).toFloat()
 
         // Altitude: 垂直精度比水平差,漂移幅度更大,限 [0,100]
         altitudeDrift += 0.5 * rng.nextGaussian() - 0.01 * altitudeDrift
         val altitude = (10.0 + altitudeDrift).coerceIn(0.0, 100.0)
 
-        return Noise(latDeg, lngDeg, speed.toFloat(), accuracy, altitude)
+        return Noise(dLatDeg, dLngDeg, speed.toFloat(), accuracy, altitude)
     }
 
-    /** 漂移稳态标准差随速度分档: 步行 1.2m / 跑步 2.0m / 更快 1.0m */
-    private val driftStdM: Double
-        get() = when {
-            currentSpeedMps < 2.0 -> TUNING.driftStdWalk
-            currentSpeedMps < 6.0 -> TUNING.driftStdRun
-            else -> TUNING.driftStdFast
-        }
-
-    /** 波动参数集中处:调观感只改这里 */
+    /** 波动参数集中处:步频/速度波动 */
     private object TUNING {
-        /** OU 均值回归强度(1/s),越大拉回越快、游走越小 */
-        const val alpha = 0.10
-        const val driftStdWalk = 1.2   // 步行档稳态漂移 std(米)
-        const val driftStdRun = 2.0    // 跑步档
-        const val driftStdFast = 1.0   // 骑行/驾驶档
-        const val stepLateralM = 0.10  // 每步横向白噪声 std(米)
+        const val stepLateralM = 0.15  // 每步横向白噪声 std(米),参考实现同款
         const val speedOuStep = 0.05   // 瞬时速度波动步长(m/s),稳态 std≈0.11
         const val speedOuAlpha = 0.10
     }

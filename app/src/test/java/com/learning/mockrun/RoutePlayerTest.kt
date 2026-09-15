@@ -63,9 +63,14 @@ class RoutePlayerTest {
         for (sec in 1..300) {
             val m = player.at(sec * 1_000_000_000L)
             val i = ideal.at(sec * 1_000_000_000L)
-            // 漂移有界: OU 稳态标准差 = 2m(跑步档收敛后),3-sigma ≈ 3 倍,取 6 倍宽松限防随机抖动
+            // 注入扰动有硬钳(±0.00004°≈4.4m),取 3 倍宽松限
             val off = RoutePlayer.haversine(GeoPoint(m.lat, m.lng), GeoPoint(i.lat, i.lng))
-            assertTrue("第${sec}s 偏离理想轨迹 ${"%.1f".format(off)}m 超界", off < 6 * 2.0)
+            assertTrue("第${sec}s 偏离理想轨迹 ${"%.1f".format(off)}m 超界", off < 13.0)
+            // 自家显示通道必须是零噪声理想轨迹(与 wobble=false 的推演完全一致)
+            val c = player.cleanMotion()
+            assertTrue("cleanMotion 不应为空", c != null)
+            assertEquals("显示纬度应为理想值", i.lat, c!!.lat, 1e-12)
+            assertEquals("显示经度应为理想值", i.lng, c.lng, 1e-12)
             // 连续性: 1s 内位移不超过 速度×1s + 漂移余量
             val step = RoutePlayer.haversine(GeoPoint(prev.lat, prev.lng), GeoPoint(m.lat, m.lng))
             assertTrue("第${sec}s 相邻喂点跳变 ${"%.1f".format(step)}m", step < speed * 1.0 + 10.0)
@@ -80,9 +85,36 @@ class RoutePlayerTest {
         for (sec in 0..600 step 7) {
             val m = player.at(sec * 1_000_000_000L)
             val off = RoutePlayer.haversine(anchor, GeoPoint(m.lat, m.lng))
-            assertTrue(off < 6 * 1.2)
+            assertTrue(off < 6.0) // 注入扰动硬钳 ±4.4m
             assertEquals(0f, m.speedMps, 0.01f)
         }
+    }
+
+    /** 跑完暂停: 超过总里程后停在终点(环线=回到起点),速度归零且不再推进 */
+    @Test
+    fun `跑完暂停停在终点`() {
+        val route = PresetRoutes.generate(PresetRoutes.ALL[0], anchor) // 操场环 ~400m
+        val len = routeLength(route)
+        val speed = 3.0
+        val player = RoutePlayer(
+            route, baseSpeedMps = speed, startElapsedNanos = 0,
+            wobble = true, loopClosed = true, stopAtEnd = true, seed = 7,
+        )
+        val finishNanos = ((len / speed).toLong() + 5) * 1_000_000_000L
+        var prev = player.at(0)
+        for (sec in 1..((len / speed).toLong() + 60)) {
+            val m = player.at(sec * 1_000_000_000L)
+            val step = RoutePlayer.haversine(GeoPoint(prev.lat, prev.lng), GeoPoint(m.lat, m.lng))
+            assertTrue("第${sec}s 喂点跳变 ${"%.1f".format(step)}m", step < speed + 3.0)
+            prev = m
+        }
+        val end = player.at(finishNanos + 10_000_000_000L)
+        val later = player.at(finishNanos + 30_000_000_000L)
+        assertEquals("跑完后速度应归零", 0f, end.speedMps, 0.001f)
+        val dStart = RoutePlayer.haversine(route[0], GeoPoint(end.lat, end.lng))
+        assertTrue("环线跑完应停在起点附近,实际偏 ${"%.1f".format(dStart)}m", dStart < 6 * 1.2)
+        val dStill = RoutePlayer.haversine(GeoPoint(end.lat, end.lng), GeoPoint(later.lat, later.lng))
+        assertTrue("跑完后位置应冻结(漂移余量),实际 ${"%.2f".format(dStill)}m", dStill < 3.0)
     }
 
     /** 播放→暂停→继续→中途调速 全序列: 位置连续、暂停冻结、恢复/变速无跳变 */

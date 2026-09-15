@@ -38,8 +38,10 @@ class MockLocationService : Service() {
         override fun run() {
             if (!running) return
             val p = player ?: return
-            val motion = p.at(SystemClock.elapsedRealtimeNanos())
+            val nanos = SystemClock.elapsedRealtimeNanos()
+            val motion = p.at(nanos)
             currentMotion = motion
+            currentClean = p.cleanMotion()
             pushPoint(LocationManager.GPS_PROVIDER, motion, accuracyBonus = 0f)
             pushPoint(LocationManager.NETWORK_PROVIDER, motion, accuracyBonus = 20f)
             handler.postDelayed(this, INTERVAL_MS)
@@ -74,6 +76,8 @@ class MockLocationService : Service() {
             startElapsedNanos = SystemClock.elapsedRealtimeNanos(),
             wobble = intent?.getBooleanExtra(EXTRA_WOBBLE, true) ?: true,
             loopClosed = intent?.getBooleanExtra(EXTRA_LOOP, false),
+            stopAtEnd = intent?.getBooleanExtra(EXTRA_FINISH_PAUSE, false) ?: false,
+            stepJitter = intent?.getBooleanExtra(EXTRA_STEP_JITTER, true) ?: true,
         )
         activeName = name
         running = true
@@ -87,6 +91,7 @@ class MockLocationService : Service() {
         handler.removeCallbacksAndMessages(null)
         player = null
         currentMotion = null
+        currentClean = null
         activeName = null
         for (provider in INJECTED_PROVIDERS) {
             try {
@@ -180,7 +185,8 @@ class MockLocationService : Service() {
         private const val TAG = "MockLocationService"
         private const val CHANNEL_ID = "mockrun_channel"
         private const val NOTIF_ID = 1
-        private const val INTERVAL_MS = 1000L
+        // 对齐参考实现的回放节奏(100ms/跳);消费方按自己的请求间隔拿最新值,不受推送频率影响
+        private const val INTERVAL_MS = 100L
         const val DEFAULT_LAT = 39.9042
         const val DEFAULT_LON = 116.4074
 
@@ -189,12 +195,19 @@ class MockLocationService : Service() {
         private const val EXTRA_NAME = "route_name"
         private const val EXTRA_WOBBLE = "wobble"
         private const val EXTRA_LOOP = "loop"
+        private const val EXTRA_FINISH_PAUSE = "finish_pause"
+        private const val EXTRA_STEP_JITTER = "step_jitter"
 
         private val INJECTED_PROVIDERS = arrayOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
 
         /** 供地图上的比格犬实时刷新(同进程直接读) */
         @Volatile
         var currentMotion: MockMotion? = null
+            private set
+
+        /** 自家 UI 回放显示用的干净位置(零噪声)。参考实现分离式:噪声只进注入,不进自家显示 */
+        @Volatile
+        var currentClean: MockMotion? = null
             private set
 
         @Volatile
@@ -205,13 +218,24 @@ class MockLocationService : Service() {
          * @param routePts DoubleArray: lat,lng,lat,lng,...(WGS-84)。
          *   只有 1 个点 → 静止点模式(带漂移),>=2 个点 → 轨迹回放
          */
-        fun start(context: Context, name: String, speedMps: Double, routePts: DoubleArray, wobble: Boolean = true, loopClosed: Boolean = false) {
+        fun start(
+            context: Context,
+            name: String,
+            speedMps: Double,
+            routePts: DoubleArray,
+            wobble: Boolean = true,
+            loopClosed: Boolean = false,
+            finishPause: Boolean = false,
+            stepJitter: Boolean = true,
+        ) {
             val intent = Intent(context, MockLocationService::class.java)
                 .putExtra(EXTRA_NAME, name)
                 .putExtra(EXTRA_SPEED, speedMps)
                 .putExtra(EXTRA_ROUTE, routePts)
                 .putExtra(EXTRA_WOBBLE, wobble)
                 .putExtra(EXTRA_LOOP, loopClosed)
+                .putExtra(EXTRA_FINISH_PAUSE, finishPause)
+                .putExtra(EXTRA_STEP_JITTER, stepJitter)
             androidx.core.content.ContextCompat.startForegroundService(context, intent)
         }
 

@@ -38,6 +38,9 @@ import com.amap.api.maps.TextureMapView
 import com.amap.api.maps.model.BitmapDescriptor
 import com.amap.api.maps.model.BitmapDescriptorFactory
 import com.amap.api.maps.model.LatLng
+import com.amap.api.maps.model.LatLngBounds
+import com.amap.api.maps.model.Marker
+import com.amap.api.maps.model.MarkerOptions
 import com.amap.api.maps.model.Polyline
 import com.amap.api.maps.model.PolylineOptions
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -64,6 +67,7 @@ class MainActivity : AppCompatActivity() {
     private var mapResumed = false
     private var aMap: AMap? = null
     private var routePolyline: Polyline? = null
+    private var runMarker: Marker? = null
     private var markerRunning = false
 
     private var anchor: GeoPoint? = null
@@ -130,7 +134,8 @@ class MainActivity : AppCompatActivity() {
 
     private val ticker = object : Runnable {
         override fun run() {
-            val motion = MockLocationService.currentMotion
+            // 显示走干净通道(零噪声,参考实现同款分离);注入走 currentMotion(带波动)
+            val motion = MockLocationService.currentClean ?: MockLocationService.currentMotion
             if (motion == null) {
                 uiHandler.postDelayed(this, TICK_MS)
                 return
@@ -138,6 +143,12 @@ class MainActivity : AppCompatActivity() {
             feedCount++
             applyRunVisual(true)
             val gcj = CoordinateConverter.wgs84ToGcj02(motion.lat, motion.lng)
+            val pos = LatLng(gcj.lat, gcj.lng)
+            drawRunMarker(pos)
+            // 路线页镜头跟着模拟点跑(用户要的);定位页不跟,拖图挪点的手势不能被抢
+            if (currentTab == TAB_ROUTE) {
+                aMap?.moveCamera(CameraUpdateFactory.changeLatLng(pos))
+            }
             statusText.text = getString(
                 R.string.status_running,
                 MockLocationService.activeName ?: "",
@@ -301,6 +312,11 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btn_draw).setOnClickListener {
             routeResultLauncher.launch(Intent(this, RouteEditorActivity::class.java))
         }
+        val cbFinish = findViewById<android.widget.CheckBox>(R.id.cb_finish_pause)
+        cbFinish.isChecked = prefs().getBoolean("finish_pause", false)
+        cbFinish.setOnCheckedChangeListener { _, c ->
+            prefs().edit().putBoolean("finish_pause", c).apply()
+        }
         findViewById<Button>(R.id.btn_my).setOnClickListener {
             routeResultLauncher.launch(Intent(this, SavedRoutesActivity::class.java))
         }
@@ -393,6 +409,10 @@ class MainActivity : AppCompatActivity() {
     private fun applyRunVisual(running: Boolean) {
         if (markerRunning == running) return
         markerRunning = running
+        if (!running) {
+            runMarker?.remove()
+            runMarker = null
+        }
         val btn = findViewById<Button>(R.id.btn_apply_location)
         if (applyBtnTint == null) applyBtnTint = btn.backgroundTintList
         if (running) {
@@ -421,6 +441,27 @@ class MainActivity : AppCompatActivity() {
         if (currentTab != TAB_ROUTE) return
         val r = customRoute ?: return
         drawRouteOnMap(r.points)
+    }
+
+    /** 地图上的模拟点小圆点:运行时每秒挪到当前注入位置(首次调用时创建) */
+    private fun drawRunMarker(pos: LatLng) {
+        val m = runMarker ?: aMap?.addMarker(
+            MarkerOptions()
+                .position(pos)
+                .icon(BitmapDescriptorFactory.fromBitmap(vectorToBitmap(R.drawable.ic_dot, 24)))
+                .anchor(0.5f, 0.5f)
+        )?.also { runMarker = it }
+        m?.position = pos
+    }
+
+    /** 把整条路线框进屏幕;镜头之后保持不动(回放中每秒跟点会抵消位移,看起来像原地画圈) */
+    private fun fitRouteOnScreen(route: List<GeoPoint>) {
+        val b = LatLngBounds.Builder()
+        route.forEach {
+            val g = CoordinateConverter.wgs84ToGcj02(it.lat, it.lng)
+            b.include(LatLng(g.lat, g.lng))
+        }
+        runCatching { aMap?.moveCamera(CameraUpdateFactory.newLatLngBounds(b.build(), 100)) }
     }
 
     private fun drawRouteOnMap(route: List<GeoPoint>) {
@@ -571,6 +612,12 @@ class MainActivity : AppCompatActivity() {
         wobbleSwitch.isChecked = prefs.getBoolean("wobble", true)
         wobbleSwitch.setOnCheckedChangeListener { _, checked ->
             prefs.edit().putBoolean("wobble", checked).apply()
+        }
+
+        val stepJitterSwitch = findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.step_jitter_switch)
+        stepJitterSwitch.isChecked = prefs.getBoolean("step_jitter", true)
+        stepJitterSwitch.setOnCheckedChangeListener { _, checked ->
+            prefs.edit().putBoolean("step_jitter", checked).apply()
         }
 
         findViewById<Button>(R.id.btn_check_update).setOnClickListener {
@@ -846,7 +893,8 @@ class MainActivity : AppCompatActivity() {
             getString(R.string.notif_default_name),
             speedForPointMode(),
             pts,
-            wobble = prefs().getBoolean("wobble", true)
+            wobble = prefs().getBoolean("wobble", true),
+            stepJitter = prefs().getBoolean("step_jitter", true),
         )
         if (announce) {
             stopTicker()
@@ -893,7 +941,17 @@ class MainActivity : AppCompatActivity() {
         }
         feedCount = 0
         drawRouteOnMap(r.points)   // 开跑瞬间把路线画上屏,不依赖切换页面的时机
-        MockLocationService.start(this, r.name, speedMps(), pts, wobble = prefs().getBoolean("wobble", true), loopClosed = r.loop)
+        fitRouteOnScreen(r.points) // 整条线框进屏幕(参考实现同款);回放中镜头不动,看小点沿线跑
+        MockLocationService.start(
+            this,
+            r.name,
+            speedMps(),
+            pts,
+            wobble = prefs().getBoolean("wobble", true),
+            loopClosed = r.loop,
+            finishPause = prefs().getBoolean("finish_pause", false),
+            stepJitter = prefs().getBoolean("step_jitter", true),
+        )
         Toast.makeText(this, R.string.toast_started, Toast.LENGTH_SHORT).show()
         stopTicker()
         uiHandler.post(ticker)
@@ -901,7 +959,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun speedMps(): Double {
         val seek = findViewById<SeekBar>(R.id.speed_seek)
-        return (seek.progress + 1) / 10.0 // 0.1 ~ 6.0 m/s
+        return (seek.progress + 1) / 10.0 // 0.1 ~ 10.0 m/s
     }
 
     private fun updateSpeedLabel() {
@@ -1043,7 +1101,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     companion object {
-        private const val TICK_MS = 1000L
+        private const val TICK_MS = 100L // 对齐参考实现的 10Hz 回放节奏
         private const val SPLASH_MAX_MS = 4000L
         private const val TAB_LOCATION = 0
         private const val TAB_ROUTE = 1
