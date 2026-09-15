@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 已应用定位时的准星:环内变为红方块 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="32dp"
+    android:height="32dp"
+    android:viewportWidth="32"
+    android:viewportHeight="32">
+    <path
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="4"
+        android:pathData="M16,5 a11,11 0 1 1 -0.01,0 z" />
+    <path
+        android:strokeColor="#FF212121"
+        android:strokeWidth="2"
+        android:pathData="M16,5 a11,11 0 1 1 -0.01,0 z" />
+    <path
+        android:fillColor="#FFE53935"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1"
+        android:pathData="M12,12 h8 v8 h-8 z" />
+</vector>

@@ -58,7 +58,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var panels: List<android.view.View>
     private lateinit var rbAmap: RadioButton
     private lateinit var rbBaidu: RadioButton
-    private lateinit var mapCrosshair: View
+    private lateinit var mapCrosshair: ImageView
 
     private var currentTab = TAB_LOCATION
     private var mapResumed = false
@@ -66,6 +66,8 @@ class MainActivity : AppCompatActivity() {
     private var beagleMarker: Marker? = null
     private var routePolyline: Polyline? = null
     private var beagleBitmap: Bitmap? = null
+    private var squareBitmap: Bitmap? = null
+    private var markerRunning = false
 
     private var anchor: GeoPoint? = null
     private var customRoute: RouteStore.SavedRoute? = null
@@ -137,6 +139,7 @@ class MainActivity : AppCompatActivity() {
                 return
             }
             feedCount++
+            applyRunVisual(true)
             val gcj = CoordinateConverter.wgs84ToGcj02(motion.lat, motion.lng)
             beagleMarker?.let { mk ->
                 mk.position = LatLng(gcj.lat, gcj.lng)
@@ -180,6 +183,7 @@ class MainActivity : AppCompatActivity() {
         mapView.onCreate(savedInstanceState)
 
         beagleBitmap = vectorToBitmap(R.drawable.ic_beagle, 128)
+        squareBitmap = vectorToBitmap(R.drawable.ic_red_square, 96)
 
         setupMap()
         setupTabs()
@@ -356,6 +360,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btn_stop).setOnClickListener {
             MockLocationService.stop(this)
             stopTicker()
+            applyRunVisual(false)
             refreshIdleStatus()
             Toast.makeText(this, R.string.toast_stopped, Toast.LENGTH_SHORT).show()
         }
@@ -385,6 +390,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** 屏幕中心圆点处 = 新锚点(仅定位Tab使用) */
+    /** 运行态视觉:标记变红方块、准星变红方块中心;停止后恢复比格与圆点 */
+    private fun applyRunVisual(running: Boolean) {
+        if (markerRunning == running) return
+        markerRunning = running
+        val bmp = if (running) squareBitmap else beagleBitmap
+        if (bmp != null) beagleMarker?.setIcon(BitmapDescriptorFactory.fromBitmap(bmp))
+        mapCrosshair.setImageResource(if (running) R.drawable.ic_crosshair_on else R.drawable.ic_crosshair)
+    }
+
     private fun updateAnchorFromCenter() {
         val target = aMap?.cameraPosition?.target ?: return
         val wgs = CoordinateConverter.gcj02ToWgs84(target.latitude, target.longitude)
