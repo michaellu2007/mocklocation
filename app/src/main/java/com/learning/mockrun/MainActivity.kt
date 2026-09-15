@@ -34,6 +34,8 @@ import com.amap.api.maps.AMap
 import com.amap.api.maps.CameraUpdateFactory
 import com.amap.api.maps.MapsInitializer
 import com.amap.api.maps.TextureMapView
+import com.amap.api.maps.model.BitmapDescriptor
+import com.amap.api.maps.model.BitmapDescriptorFactory
 import com.amap.api.maps.model.LatLng
 import com.amap.api.maps.model.Polyline
 import com.amap.api.maps.model.PolylineOptions
@@ -405,11 +407,13 @@ class MainActivity : AppCompatActivity() {
             val g = CoordinateConverter.wgs84ToGcj02(it.lat, it.lng)
             LatLng(g.lat, g.lng)
         }
+        // 导航风格:绿底白箭头纹理沿线平铺(随行进方向旋转),粗线更醒目
         routePolyline = aMap?.addPolyline(
             PolylineOptions()
                 .addAll(gcjPts)
-                .color(0xFF00C853.toInt())
-                .width(14f)
+                .setCustomTexture(BitmapDescriptorFactory.fromAsset("route_arrow_texture.png"))
+                .setUseTexture(true)
+                .width(26f)
         )
     }
 

@@ -156,7 +156,14 @@ class RouteEditorActivity : AppCompatActivity() {
             val g = CoordinateConverter.wgs84ToGcj02(it.lat, it.lng)
             LatLng(g.lat, g.lng)
         }
-        polyline = aMap?.addPolyline(PolylineOptions().addAll(gcjPts).color(0xCC2E7D32.toInt()).width(10f))
+        // 编辑器预览同样用导航箭头纹理(指向与行进方向一致)
+        polyline = aMap?.addPolyline(
+            PolylineOptions()
+                .addAll(gcjPts)
+                .setCustomTexture(BitmapDescriptorFactory.fromAsset("route_arrow_texture.png"))
+                .setUseTexture(true)
+                .width(20f)
+        )
 
         // 逐点标记: 起点绿"起",终点红"终"(仅多点时),其余棕色序号
         pts.forEachIndexed { i, p ->
