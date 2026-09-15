@@ -214,11 +214,14 @@ class MainActivity : AppCompatActivity() {
         map.uiSettings.isMyLocationButtonEnabled = false
         // 地图就绪(瓦片加载完成)即淡出启动页;key 无效等异常由 4s 超时兜底
         map.setOnMapLoadedListener { hideSplash() }
-        // 定位Tab:拖到哪就模拟到哪——相机停稳后,锚点自动取屏幕中心圆点处
+        // 定位Tab:拖到哪就模拟到哪——相机停稳后,锚点自动取屏幕中心大头针处
         map.setOnCameraChangeListener(object : AMap.OnCameraChangeListener {
             override fun onCameraChange(pos: com.amap.api.maps.model.CameraPosition?) {}
             override fun onCameraChangeFinish(pos: com.amap.api.maps.model.CameraPosition?) {
-                if (currentTab == TAB_LOCATION) updateAnchorFromCenter()
+                if (currentTab == TAB_LOCATION) {
+                    if (markerRunning) applyLocationAtCenter(announce = false)  // 运行中拖动 = 实时把模拟点挪过来
+                    else updateAnchorFromCenter()
+                }
             }
         })
         val a = anchor
@@ -268,9 +271,6 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.search_card).visibility = if (tab == TAB_LOCATION) View.VISIBLE else View.GONE
         // 开跑条(速度/启停)只在路线 Tab 需要;定位 Tab 用「应用定位」
         findViewById<View>(R.id.running_bar).visibility = if (tab == TAB_ROUTE) View.VISIBLE else View.GONE
-        // 右下角运行钮:定位/路线 Tab 都可用
-        findViewById<View>(R.id.fab_run_toggle).visibility = if (mapVisible) View.VISIBLE else View.GONE
-        applyRunVisual(MockLocationService.currentMotion != null)
         panels.forEachIndexed { i, v -> v.visibility = if (i == tab) View.VISIBLE else View.GONE }
         if (tab == TAB_SETTINGS) refreshAuthStatus()
         setMapResumed(mapVisible)
@@ -309,7 +309,19 @@ class MainActivity : AppCompatActivity() {
             routeResultLauncher.launch(Intent(this, RouteEditorActivity::class.java))
         }
 
-        findViewById<Button>(R.id.btn_apply_location).setOnClickListener { doStart() }
+        findViewById<Button>(R.id.btn_apply_location).setOnClickListener {
+            if (markerRunning) {
+                MockLocationService.stop(this)
+                stopTicker()
+                applyRunVisual(false)
+                refreshIdleStatus()
+                Toast.makeText(this, R.string.toast_stopped, Toast.LENGTH_SHORT).show()
+            } else {
+                applyLocationAtCenter(announce = true)
+                Toast.makeText(this, R.string.applied_done, Toast.LENGTH_SHORT).show()
+                uiHandler.post(ticker)
+            }
+        }
         findViewById<Button>(R.id.btn_fav_add).setOnClickListener { addFavorite() }
         findViewById<Button>(R.id.btn_fav_list).setOnClickListener { showFavoritesDialog() }
         val searchInput = findViewById<EditText>(R.id.search_input)
@@ -373,16 +385,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** 屏幕中心圆点处 = 新锚点(仅定位Tab使用) */
-    /** 运行态视觉:准星中心变红方块、右下角钮变红底白方块;停止后恢复待命态 */
+    /** 运行态视觉:应用定位按钮变红显示「结束定位」;停止恢复「应用定位」 */
     private fun applyRunVisual(running: Boolean) {
         if (markerRunning == running) return
         markerRunning = running
-        mapCrosshair.setImageResource(if (running) R.drawable.ic_crosshair_on else R.drawable.ic_crosshair)
-        val fab = findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.fab_run_toggle)
-        fab.setImageResource(if (running) R.drawable.ic_stop_square else R.drawable.ic_play)
-        fab.backgroundTintList = android.content.res.ColorStateList.valueOf(
-            if (running) 0xFFE53935.toInt() else 0xFF2E7D32.toInt()
-        )
+        val btn = findViewById<Button>(R.id.btn_apply_location)
+        if (running) {
+            btn.text = getString(R.string.btn_stop_location)
+            btn.backgroundTintList = android.content.res.ColorStateList.valueOf(0xFFE53935.toInt())
+        } else {
+            btn.text = getString(R.string.btn_apply_location)
+            btn.backgroundTintList = null
+        }
     }
 
     private fun updateAnchorFromCenter() {
@@ -801,41 +815,75 @@ class MainActivity : AppCompatActivity() {
         doStart()
     }
 
+    /** 应用定位:把屏幕中心大头针处设为模拟点并(重)启动注入;运行中拖动地图时静默挪点 */
+    private fun applyLocationAtCenter(announce: Boolean) {
+        val target = aMap?.cameraPosition?.target ?: return
+        val wgs = CoordinateConverter.gcj02ToWgs84(target.latitude, target.longitude)
+        val a = GeoPoint(wgs.lat, wgs.lng)
+        anchor = a
+        saveAnchor(a)
+
+        // 单点改 2m 微动环:让融合定位(高德等)持续看到 GPS 位移,否则蓝点会被真位置拉回
+        val loop = tinyLoopAround(a)
+        val pts = DoubleArray(loop.size * 2).also { arr ->
+            loop.forEachIndexed { i, p ->
+                arr[i * 2] = p.lat
+                arr[i * 2 + 1] = p.lng
+            }
+        }
+        feedCount = 0
+        MockLocationService.start(
+            this,
+            getString(R.string.notif_default_name),
+            speedForPointMode(),
+            pts,
+            wobble = prefs().getBoolean("wobble", true)
+        )
+        if (announce) {
+            stopTicker()
+            uiHandler.post(ticker)
+        }
+    }
+
+    /** 原地微动环用慢速(蓝点停在目标附近微微画圈) */
+    private fun speedForPointMode(): Double = speedMps().coerceIn(0.1, 0.4)
+
+    private fun tinyLoopAround(p: GeoPoint): List<GeoPoint> {
+        val r = 2.0
+        val n = 12
+        val latRad = Math.toRadians(p.lat)
+        val out = ArrayList<GeoPoint>(n + 1)
+        for (i in 0..n) {
+            val a = 2 * Math.PI * i / n
+            out.add(
+                GeoPoint(
+                    p.lat + RoutePlayer.metersToDegLat(r * Math.sin(a)),
+                    p.lng + RoutePlayer.metersToDegLng(r * Math.cos(a), latRad)
+                )
+            )
+        }
+        return out
+    }
+
+    /** 路线 Tab 回放:跑当前装填的自定义路线 */
     private fun doStart() {
         // release 版公共额度门禁:未配置个人 Key 时拦截(专业口径见弹窗文案)
         if (quotaBlocked()) {
             showKeyQuotaDialog()
             return
         }
-        // 定位 Tab = 屏幕中心圆点处驻留;路线 Tab = 自定义路线回放
-        val name: String
-        val route: List<GeoPoint>
-        if (currentTab == TAB_LOCATION) {
-            updateAnchorFromCenter()
-            val a = anchor ?: run {
-                Toast.makeText(this, R.string.toast_pick_first, Toast.LENGTH_SHORT).show()
-                return
-            }
-            name = getString(R.string.notif_default_name)
-            route = listOf(a)
-        } else {
-            val r = customRoute
-            if (r == null) {
-                Toast.makeText(this, R.string.toast_no_custom_route, Toast.LENGTH_SHORT).show()
-                return
-            }
-            name = r.name
-            route = r.points
+        val r = customRoute
+        if (r == null) {
+            Toast.makeText(this, R.string.toast_no_custom_route, Toast.LENGTH_SHORT).show()
+            return
         }
-
-        val pts = DoubleArray(route.size * 2)
-        route.forEachIndexed { i, p ->
+        val pts = DoubleArray(r.points.size * 2)
+        r.points.forEachIndexed { i, p ->
             pts[i * 2] = p.lat
             pts[i * 2 + 1] = p.lng
         }
-
         feedCount = 0
-        MockLocationService.start(this, name, speedMps(), pts, wobble = prefs().getBoolean("wobble", true))
+        MockLocationService.start(this, r.name, speedMps(), pts, wobble = prefs().getBoolean("wobble", true))
         Toast.makeText(this, R.string.toast_started, Toast.LENGTH_SHORT).show()
         stopTicker()
         uiHandler.post(ticker)
@@ -878,6 +926,7 @@ class MainActivity : AppCompatActivity() {
         refreshAuthStatus()
         if (isMapTab()) setMapResumed(true)
         if (MockLocationService.currentMotion != null) {
+            applyRunVisual(true)
             stopTicker()
             uiHandler.post(ticker)
         }

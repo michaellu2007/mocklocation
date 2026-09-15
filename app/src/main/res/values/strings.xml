@@ -72,6 +72,8 @@
     <string name="btn_check_update">检查更新</string>
     <string name="btn_apply">定位</string>
     <string name="btn_apply_location">应用定位</string>
+    <string name="btn_stop_location">结束定位</string>
+    <string name="applied_done">已应用定位(红方块=模拟中)</string>
     <string name="hint_lat">纬度 (-90 ~ 90)</string>
     <string name="hint_lon">经度 (-180 ~ 180)</string>
     <string name="manual_coord_fmt">手动坐标(解析口径:%1$s)</string>
