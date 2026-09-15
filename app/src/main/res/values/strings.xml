@@ -88,6 +88,7 @@
     <string name="stab_map">地图设置</string>
     <string name="stab_update">更新</string>
     <string name="stab_donate">打赏</string>
+    <string name="fab_run_desc">开始或停止模拟</string>
     <string name="donate_wip">🚧 打赏功能开发中,敬请期待</string>
     <string name="donate_wechat_label">微信收款码(截图扫码)</string>
     <string name="donate_alipay_label">支付宝收款码(截图扫码)</string>

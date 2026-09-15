@@ -34,10 +34,7 @@ import com.amap.api.maps.AMap
 import com.amap.api.maps.CameraUpdateFactory
 import com.amap.api.maps.MapsInitializer
 import com.amap.api.maps.TextureMapView
-import com.amap.api.maps.model.BitmapDescriptorFactory
 import com.amap.api.maps.model.LatLng
-import com.amap.api.maps.model.Marker
-import com.amap.api.maps.model.MarkerOptions
 import com.amap.api.maps.model.Polyline
 import com.amap.api.maps.model.PolylineOptions
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -63,9 +60,7 @@ class MainActivity : AppCompatActivity() {
     private var currentTab = TAB_LOCATION
     private var mapResumed = false
     private var aMap: AMap? = null
-    private var positionMarker: Marker? = null
     private var routePolyline: Polyline? = null
-    private var squareBitmap: Bitmap? = null
     private var markerRunning = false
 
     private var anchor: GeoPoint? = null
@@ -140,9 +135,6 @@ class MainActivity : AppCompatActivity() {
             feedCount++
             applyRunVisual(true)
             val gcj = CoordinateConverter.wgs84ToGcj02(motion.lat, motion.lng)
-            positionMarker?.let { mk ->
-                mk.position = LatLng(gcj.lat, gcj.lng)
-            }
             statusText.text = getString(
                 R.string.status_running,
                 MockLocationService.activeName ?: "",
@@ -180,7 +172,6 @@ class MainActivity : AppCompatActivity() {
         )
         mapView.onCreate(savedInstanceState)
 
-        squareBitmap = vectorToBitmap(R.drawable.ic_red_square, 96)
 
         setupMap()
         setupTabs()
@@ -274,6 +265,9 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.search_card).visibility = if (tab == TAB_LOCATION) View.VISIBLE else View.GONE
         // 开跑条(速度/启停)只在路线 Tab 需要;定位 Tab 用「应用定位」
         findViewById<View>(R.id.running_bar).visibility = if (tab == TAB_ROUTE) View.VISIBLE else View.GONE
+        // 右下角运行钮:定位/路线 Tab 都可用
+        findViewById<View>(R.id.fab_run_toggle).visibility = if (mapVisible) View.VISIBLE else View.GONE
+        applyRunVisual(MockLocationService.currentMotion != null)
         panels.forEachIndexed { i, v -> v.visibility = if (i == tab) View.VISIBLE else View.GONE }
         if (tab == TAB_SETTINGS) refreshAuthStatus()
         setMapResumed(mapVisible)
@@ -376,27 +370,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** 屏幕中心圆点处 = 新锚点(仅定位Tab使用) */
-    /** 运行态视觉:跑动时出现红方块标记、准星中心变红方块;停止后二者消失(待命不放标记) */
+    /** 运行态视觉:准星中心变红方块、右下角钮变红底白方块;停止后恢复待命态 */
     private fun applyRunVisual(running: Boolean) {
         if (markerRunning == running) return
         markerRunning = running
-        if (running) {
-            val bmp = squareBitmap
-            if (bmp != null && positionMarker == null) {
-                positionMarker = aMap?.addMarker(
-                    MarkerOptions()
-                        .position(LatLng(0.0, 0.0))
-                        .icon(BitmapDescriptorFactory.fromBitmap(bmp))
-                        .anchor(0.5f, 0.5f)
-                        .setFlat(true)
-                )
-            }
-            mapCrosshair.setImageResource(R.drawable.ic_crosshair_on)
-        } else {
-            positionMarker?.remove()
-            positionMarker = null
-            mapCrosshair.setImageResource(R.drawable.ic_crosshair)
-        }
+        mapCrosshair.setImageResource(if (running) R.drawable.ic_crosshair_on else R.drawable.ic_crosshair)
+        val fab = findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.fab_run_toggle)
+        fab.setImageResource(if (running) R.drawable.ic_stop_square else R.drawable.ic_play)
+        fab.backgroundTintList = android.content.res.ColorStateList.valueOf(
+            if (running) 0xFFE53935.toInt() else 0xFF2E7D32.toInt()
+        )
     }
 
     private fun updateAnchorFromCenter() {

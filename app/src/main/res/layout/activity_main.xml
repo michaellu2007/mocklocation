@@ -490,6 +490,19 @@
         </FrameLayout>
     </LinearLayout>
 
+    <!-- 右下角悬浮运行控制钮(学参考项目):待命=绿色播放,运行=红色方块,点击切换 -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_run_toggle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="200dp"
+        android:contentDescription="@string/fab_run_desc"
+        android:src="@drawable/ic_play"
+        app:backgroundTint="#FF2E7D32"
+        app:tint="#FFFFFFFF" />
+
     <!-- 底部堆叠:地图Tab面板 + 开跑条 + 导航(始终最上层,任何页都能切走) -->
     <LinearLayout
         android:layout_width="match_parent"
