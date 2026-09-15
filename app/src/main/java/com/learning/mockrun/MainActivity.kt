@@ -63,9 +63,8 @@ class MainActivity : AppCompatActivity() {
     private var currentTab = TAB_LOCATION
     private var mapResumed = false
     private var aMap: AMap? = null
-    private var beagleMarker: Marker? = null
+    private var positionMarker: Marker? = null
     private var routePolyline: Polyline? = null
-    private var beagleBitmap: Bitmap? = null
     private var squareBitmap: Bitmap? = null
     private var markerRunning = false
 
@@ -141,9 +140,8 @@ class MainActivity : AppCompatActivity() {
             feedCount++
             applyRunVisual(true)
             val gcj = CoordinateConverter.wgs84ToGcj02(motion.lat, motion.lng)
-            beagleMarker?.let { mk ->
+            positionMarker?.let { mk ->
                 mk.position = LatLng(gcj.lat, gcj.lng)
-                mk.rotateAngle = motion.bearingDeg
             }
             statusText.text = getString(
                 R.string.status_running,
@@ -182,7 +180,6 @@ class MainActivity : AppCompatActivity() {
         )
         mapView.onCreate(savedInstanceState)
 
-        beagleBitmap = vectorToBitmap(R.drawable.ic_beagle, 128)
         squareBitmap = vectorToBitmap(R.drawable.ic_red_square, 96)
 
         setupMap()
@@ -368,35 +365,38 @@ class MainActivity : AppCompatActivity() {
         refreshVersion()
     }
 
-    private fun setupBeagleMarker(gcj: LatLng) {
-        val bmp = beagleBitmap ?: return
-        beagleMarker = aMap?.addMarker(
-            MarkerOptions()
-                .position(gcj)
-                .icon(BitmapDescriptorFactory.fromBitmap(bmp))
-                .anchor(0.5f, 0.5f)
-                .setFlat(true)
-        )
-    }
-
     private fun setAnchor(wgs: GeoPoint, animateCamera: Boolean) {
         anchor = wgs
         saveAnchor(wgs)
-        val gcj = CoordinateConverter.wgs84ToGcj02(wgs.lat, wgs.lng)
-        val latLng = LatLng(gcj.lat, gcj.lng)
-        if (beagleMarker == null) setupBeagleMarker(latLng) else beagleMarker?.position = latLng
-        if (animateCamera) aMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16f))
+        if (animateCamera) {
+            val gcj = CoordinateConverter.wgs84ToGcj02(wgs.lat, wgs.lng)
+            aMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(gcj.lat, gcj.lng), 16f))
+        }
         updateRoutePreview()
     }
 
     /** 屏幕中心圆点处 = 新锚点(仅定位Tab使用) */
-    /** 运行态视觉:标记变红方块、准星变红方块中心;停止后恢复比格与圆点 */
+    /** 运行态视觉:跑动时出现红方块标记、准星中心变红方块;停止后二者消失(待命不放标记) */
     private fun applyRunVisual(running: Boolean) {
         if (markerRunning == running) return
         markerRunning = running
-        val bmp = if (running) squareBitmap else beagleBitmap
-        if (bmp != null) beagleMarker?.setIcon(BitmapDescriptorFactory.fromBitmap(bmp))
-        mapCrosshair.setImageResource(if (running) R.drawable.ic_crosshair_on else R.drawable.ic_crosshair)
+        if (running) {
+            val bmp = squareBitmap
+            if (bmp != null && positionMarker == null) {
+                positionMarker = aMap?.addMarker(
+                    MarkerOptions()
+                        .position(LatLng(0.0, 0.0))
+                        .icon(BitmapDescriptorFactory.fromBitmap(bmp))
+                        .anchor(0.5f, 0.5f)
+                        .setFlat(true)
+                )
+            }
+            mapCrosshair.setImageResource(R.drawable.ic_crosshair_on)
+        } else {
+            positionMarker?.remove()
+            positionMarker = null
+            mapCrosshair.setImageResource(R.drawable.ic_crosshair)
+        }
     }
 
     private fun updateAnchorFromCenter() {
@@ -406,9 +406,6 @@ class MainActivity : AppCompatActivity() {
         if (anchor == null || RoutePlayer.haversine(anchor!!, p) > 0.5) {
             anchor = p
             saveAnchor(p)
-            val gcj = CoordinateConverter.wgs84ToGcj02(p.lat, p.lng)
-            val latLng = LatLng(gcj.lat, gcj.lng)
-            if (beagleMarker == null) setupBeagleMarker(latLng) else beagleMarker?.position = latLng
         }
     }
 
