@@ -95,6 +95,7 @@ class SavedRoutesActivity : AppCompatActivity() {
     private fun showActions(route: RouteStore.SavedRoute) {
         val actions = arrayOf(
             getString(R.string.act_use),
+            getString(R.string.act_rename),
             getString(R.string.act_share),
             getString(R.string.act_export),
             getString(R.string.act_delete)
@@ -104,11 +105,50 @@ class SavedRoutesActivity : AppCompatActivity() {
             .setItems(actions) { _, which ->
                 when (which) {
                     0 -> useRoute(route)
-                    1 -> shareRoute(route)
-                    2 -> exportRoute(route)
-                    3 -> confirmDelete(route)
+                    1 -> showRenameDialog(route)
+                    2 -> shareRoute(route)
+                    3 -> exportRoute(route)
+                    4 -> confirmDelete(route)
                 }
             }
+            .show()
+    }
+
+    private fun showRenameDialog(route: RouteStore.SavedRoute) {
+        val input = android.widget.EditText(this).apply {
+            setText(route.name)
+            setSelection(route.name.length)
+        }
+        val container = android.widget.FrameLayout(this).apply {
+            setPadding(60, 20, 60, 0)
+            addView(input)
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.routes_rename_title)
+            .setView(container)
+            .setPositiveButton(R.string.act_rename) { _, _ ->
+                val newName = input.text.toString().trim()
+                when {
+                    newName.isEmpty() ->
+                        Toast.makeText(this, R.string.routes_rename_empty, Toast.LENGTH_SHORT).show()
+                    RouteStore.rename(this, route.name, newName) -> {
+                        // 若改名的是"上次使用的路线",同步持久化里的名字
+                        val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+                        prefs.getString("last_route", null)?.let { s ->
+                            RouteStore.parseRoute(s)?.takeIf { it.name == route.name }?.let { r ->
+                                prefs.edit()
+                                    .putString("last_route", RouteStore.encode(r.copy(name = newName)))
+                                    .apply()
+                            }
+                        }
+                        Toast.makeText(this, getString(R.string.routes_renamed, newName), Toast.LENGTH_SHORT).show()
+                        refresh()
+                    }
+                    else ->
+                        Toast.makeText(this, getString(R.string.routes_rename_dup, newName), Toast.LENGTH_LONG).show()
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
 

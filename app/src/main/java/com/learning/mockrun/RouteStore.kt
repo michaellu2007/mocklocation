@@ -44,6 +44,19 @@ object RouteStore {
         writeAll(context, encodeAll(all))
     }
 
+    /** 原位重命名(不打乱顺序);新名与既有路线重复或旧名不存在时返回 false */
+    fun rename(context: Context, oldName: String, newName: String): Boolean {
+        val trimmed = newName.trim()
+        if (trimmed.isEmpty()) return false
+        val all = list(context)
+        if (all.none { it.name == oldName }) return false
+        if (oldName != trimmed && all.any { it.name == trimmed }) return false
+        writeAll(context, encodeAll(all.map {
+            if (it.name == oldName) it.copy(name = trimmed) else it
+        }))
+        return true
+    }
+
     /**
      * 原子写:临时文件 + rename,避免写到一半被杀导致整个路线库损坏。
      * rename 失败(跨文件系统等极端情况)退回直接写。
