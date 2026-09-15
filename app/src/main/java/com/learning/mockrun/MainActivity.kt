@@ -388,16 +388,20 @@ class MainActivity : AppCompatActivity() {
 
     /** 屏幕中心圆点处 = 新锚点(仅定位Tab使用) */
     /** 运行态视觉:应用定位按钮变红显示「结束定位」;停止恢复「应用定位」 */
+    private var applyBtnTint: android.content.res.ColorStateList? = null
+
     private fun applyRunVisual(running: Boolean) {
         if (markerRunning == running) return
         markerRunning = running
         val btn = findViewById<Button>(R.id.btn_apply_location)
+        if (applyBtnTint == null) applyBtnTint = btn.backgroundTintList
         if (running) {
             btn.text = getString(R.string.btn_stop_location)
             btn.backgroundTintList = android.content.res.ColorStateList.valueOf(0xFFE53935.toInt())
         } else {
             btn.text = getString(R.string.btn_apply_location)
-            btn.backgroundTintList = null
+            // 不能置 null:清空 tint 后 Material 按钮不会回到主题色,会黑掉;还原缓存的主题默认 tint
+            btn.backgroundTintList = applyBtnTint
         }
     }
 
@@ -889,7 +893,7 @@ class MainActivity : AppCompatActivity() {
         }
         feedCount = 0
         drawRouteOnMap(r.points)   // 开跑瞬间把路线画上屏,不依赖切换页面的时机
-        MockLocationService.start(this, r.name, speedMps(), pts, wobble = prefs().getBoolean("wobble", true))
+        MockLocationService.start(this, r.name, speedMps(), pts, wobble = prefs().getBoolean("wobble", true), loopClosed = r.loop)
         Toast.makeText(this, R.string.toast_started, Toast.LENGTH_SHORT).show()
         stopTicker()
         uiHandler.post(ticker)

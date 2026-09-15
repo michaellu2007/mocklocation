@@ -41,6 +41,8 @@ class RoutePlayer(
     baseSpeedMps: Double,
     private val startElapsedNanos: Long,
     private val wobble: Boolean = true,
+    /** 用户勾选的环线开关: true=强制按闭环循环(首尾间缺口自动补一段),false=开线往返 */
+    private val loopClosed: Boolean? = null,
     seed: Long = System.nanoTime(),
 ) {
     private val rng = Random(seed)
@@ -82,7 +84,8 @@ class RoutePlayer(
             }
             cum = c
             val gap = haversine(clean.first(), clean.last())
-            closedLoop = gap <= 5.0
+            // 环线判定: 用户勾了环线开关则强制闭环;未指定时按首尾距离自动判断
+            closedLoop = loopClosed ?: (gap <= 5.0)
             totalLengthM = if (closedLoop) total + gap else total
         }
     }

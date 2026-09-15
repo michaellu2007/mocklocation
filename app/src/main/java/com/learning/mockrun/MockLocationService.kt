@@ -73,6 +73,7 @@ class MockLocationService : Service() {
             baseSpeedMps = speed,
             startElapsedNanos = SystemClock.elapsedRealtimeNanos(),
             wobble = intent?.getBooleanExtra(EXTRA_WOBBLE, true) ?: true,
+            loopClosed = intent?.getBooleanExtra(EXTRA_LOOP, false),
         )
         activeName = name
         running = true
@@ -187,6 +188,7 @@ class MockLocationService : Service() {
         private const val EXTRA_SPEED = "speed_mps"
         private const val EXTRA_NAME = "route_name"
         private const val EXTRA_WOBBLE = "wobble"
+        private const val EXTRA_LOOP = "loop"
 
         private val INJECTED_PROVIDERS = arrayOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
 
@@ -203,12 +205,13 @@ class MockLocationService : Service() {
          * @param routePts DoubleArray: lat,lng,lat,lng,...(WGS-84)。
          *   只有 1 个点 → 静止点模式(带漂移),>=2 个点 → 轨迹回放
          */
-        fun start(context: Context, name: String, speedMps: Double, routePts: DoubleArray, wobble: Boolean = true) {
+        fun start(context: Context, name: String, speedMps: Double, routePts: DoubleArray, wobble: Boolean = true, loopClosed: Boolean = false) {
             val intent = Intent(context, MockLocationService::class.java)
                 .putExtra(EXTRA_NAME, name)
                 .putExtra(EXTRA_SPEED, speedMps)
                 .putExtra(EXTRA_ROUTE, routePts)
                 .putExtra(EXTRA_WOBBLE, wobble)
+                .putExtra(EXTRA_LOOP, loopClosed)
             androidx.core.content.ContextCompat.startForegroundService(context, intent)
         }
 

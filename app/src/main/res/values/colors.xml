@@ -1,4 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_bg">#FFFFFF</color>
+
+    <!-- 比格主题:亮橘主色,统一全 App 背景与按钮 -->
+    <color name="brand_orange">#FF9500</color>
+    <color name="on_orange">#FFFFFF</color>
+    <color name="orange_container">#FFE0B2</color>
+    <color name="on_orange_container">#4E342E</color>
+    <!-- 毛玻璃:半透明白,浮在地图上成磨砂观感(参考 LocationSpoofer,其真模糊仅 API33+) -->
+    <color name="glass">#B8FFFFFF</color>
 </resources>
