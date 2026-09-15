@@ -1,5 +1,6 @@
 package com.learning.mockrun
 
+import android.content.ClipData
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -10,6 +11,8 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.FileProvider
+import java.io.File
 
 /**
  * 我的路线:点按条目 → 使用/导出/删除;「导入」读取导出的 JSON 文件。
@@ -90,17 +93,44 @@ class SavedRoutesActivity : AppCompatActivity() {
     }
 
     private fun showActions(route: RouteStore.SavedRoute) {
-        val actions = arrayOf(getString(R.string.act_use), getString(R.string.act_export), getString(R.string.act_delete))
+        val actions = arrayOf(
+            getString(R.string.act_use),
+            getString(R.string.act_share),
+            getString(R.string.act_export),
+            getString(R.string.act_delete)
+        )
         AlertDialog.Builder(this)
             .setTitle(route.name)
             .setItems(actions) { _, which ->
                 when (which) {
                     0 -> useRoute(route)
-                    1 -> exportRoute(route)
-                    2 -> confirmDelete(route)
+                    1 -> shareRoute(route)
+                    2 -> exportRoute(route)
+                    3 -> confirmDelete(route)
                 }
             }
             .show()
+    }
+
+    /**
+     * 一键分享路线文件(收集入口):写进 cache/share 后走系统分享面板,
+     * 用户直接选微信/QQ 发给作者即可,不用先导出再翻文件。
+     */
+    private fun shareRoute(route: RouteStore.SavedRoute) {
+        val safeName = route.name.replace(Regex("[\\\\/:*?\"<>|]"), "_")
+        val dir = File(cacheDir, "share").apply { mkdirs() }
+        val file = File(dir, safeName + ".json")
+        file.writeText(RouteStore.encode(route))
+
+        val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/json"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_SUBJECT, route.name)
+            clipData = ClipData.newRawUri(route.name, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        startActivity(Intent.createChooser(intent, getString(R.string.routes_share_chooser)))
     }
 
     private fun useRoute(route: RouteStore.SavedRoute) {

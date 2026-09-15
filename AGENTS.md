@@ -7,6 +7,9 @@ Android 模拟定位 App，包名 `com.learning.mockrun`，Kotlin。合规边界
 - 机器上**没有**独立 JDK/Gradle。唯一 JDK 是 Android Studio 自带 JBR 25：
   `C:\Program Files\Android\Android Studio\jbr`
   已 `setx JAVA_HOME` 持久化，`gradle.properties` 里 `org.gradle.java.home` 也指向它。两处都有意保留。
+  ⚠️ `setx` 只对**之后新开**的进程生效：ZCode 的 Bash 子进程经常继承不到
+  JAVA_HOME，gradlew 会报 `JAVA_HOME is not set`。跑之前先
+  `export JAVA_HOME="C:/Program Files/Android/Android Studio/jbr"`。
 - SDK：`C:\Users\micha\AppData\Local\Android\Sdk`，只有 `android-37.0` 平台 + build-tools `36.0.0`，license 已接受。
 - **本机直连 dl.google.com 不通**。`settings.gradle.kts` 阿里云镜像优先（google/gradle-plugin/public），官方仓库作回退；wrapper 的 `distributionUrl` 指向腾讯镜像。**别删别"修复"。**
 
@@ -90,3 +93,23 @@ Android 模拟定位 App，包名 `com.learning.mockrun`，Kotlin。合规边界
 - `setx JAVA_HOME` 指向 JBR 25 是机器级永久改动：好处是裸终端能跑 gradlew；代价是其他依赖 JAVA_HOME 的老 Java 工具会拿到 JDK 25。
 - 权限申请顺序（Phase 1+）：FINE+COARSE 必须一起申请（API 31+ 只申 FINE 会被拒）；`ACCESS_BACKGROUND_LOCATION` API 30+ 必须运行时**单独**申请且要先有前台定位权限。
 - 部分 ROM（小米等）会提示"检测到模拟位置"，属正常现象，不影响注入。
+
+## Release 流程与 backlog（2026-09-14）
+
+- **Release 0.0.1**(路线收集版): release 构建复用 debug 签名直接分发(装过 debug 版可覆盖);
+  版本号在 app/build.gradle.kts defaultConfig;用户上手文档 docs/RELEASE-0.0.1-上手.md。
+- 路线收集链路: 用户画路线 → 我的路线 → **分享给作者**(FileProvider, cache/share, 系统分享面板选微信)
+  → 作者收到 JSON → 自己的 App「我的路线→导入」收录。
+- **更新永不强制**,App 无任何联网/自更新逻辑,保持纯本地。
+- backlog(用户点名,后续 release): ①开屏页放一只比格 ②跑步中的比格动画
+  ③T7 百度双引擎地图视图(SDK 已在 maven,无阻塞) ④T1 暂停/继续/运行中调速/通知栏停止 ⑤T6 启动图标。
+
+## 工作模式（2026-09-14 晚更新：停用 DeepSeek 工人）
+
+- 用户改令：**停用 DeepSeek/CodeBuddy 工人通道，代码由 ZCode（GLM）全权
+  直接实现**，不再派活。deepseek-worker skill 已归档到
+  `~/.zcode/skills-disabled/`（codebuddy CLI 用法资料在内，要恢复再挪回去）。
+- `PLAN.md` 仍是唯一计划源，任务完成在那里打勾维护。
+- 门禁三件套：`testDebugUnitTest` / `assembleDebug` / `:app:lintDebug`
+  （每任务交付前跑，JAVA_HOME 坑见构建环境节）。
+- git commit 先问用户。

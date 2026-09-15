@@ -30,12 +30,26 @@ object RouteStore {
     /** 同名覆盖,其余保持原顺序 */
     fun add(context: Context, route: SavedRoute) {
         val all = list(context).filterNot { it.name == route.name } + route
-        file(context).writeText(encodeAll(all))
+        writeAll(context, encodeAll(all))
     }
 
     fun remove(context: Context, name: String) {
         val all = list(context).filterNot { it.name == name }
-        file(context).writeText(encodeAll(all))
+        writeAll(context, encodeAll(all))
+    }
+
+    /**
+     * 原子写:临时文件 + rename,避免写到一半被杀导致整个路线库损坏。
+     * rename 失败(跨文件系统等极端情况)退回直接写。
+     */
+    private fun writeAll(context: Context, text: String) {
+        val f = file(context)
+        val tmp = File(f.parentFile, f.name + ".tmp")
+        tmp.writeText(text)
+        if (!tmp.renameTo(f)) {
+            f.writeText(text)
+            tmp.delete()
+        }
     }
 
     fun encodeAll(all: List<SavedRoute>): String {
