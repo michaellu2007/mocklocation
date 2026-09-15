@@ -90,6 +90,7 @@ Android 模拟定位 App，包名 `com.learning.mockrun`，Kotlin。合规边界
 
 ## 其他已知取舍（有意识即可，别动）
 
+- **布局铁律**: 全屏页(路线库/设置)必须放在底部堆叠(含导航)的**前面**——FrameLayout 越靠后越上层,放后面会整页盖住导航栏(已犯两次,第二次是整文件重写时复发)。改 activity_main.xml 前先数一遍 children 顺序。
 - `setx JAVA_HOME` 指向 JBR 25 是机器级永久改动：好处是裸终端能跑 gradlew；代价是其他依赖 JAVA_HOME 的老 Java 工具会拿到 JDK 25。
 - 权限申请顺序（Phase 1+）：FINE+COARSE 必须一起申请（API 31+ 只申 FINE 会被拒）；`ACCESS_BACKGROUND_LOCATION` API 30+ 必须运行时**单独**申请且要先有前台定位权限。
 - 部分 ROM（小米等）会提示"检测到模拟位置"，属正常现象，不影响注入。

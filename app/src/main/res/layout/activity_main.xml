@@ -2,747 +2,756 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#FFFFFFFF">
+    android:layout_height="match_parent">
 
-    <!-- 共享底层地图:定位/路线 Tab 在它上面操作(库/设置页时不渲染) -->
-    <com.amap.api.maps.TextureMapView
-        android:id="@+id/map_view"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
-    <!-- 定位Tab:屏幕中心大头针,拖动地图把针尖对准目标 -->
-    <ImageView
-        android:id="@+id/map_crosshair"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:layout_gravity="center"
-        android:contentDescription="@string/hint_center"
-        android:src="@drawable/ic_map_pin" />
-
-    <!-- 顶部悬浮搜索卡(学参考项目 SpoofingSearchBar):输入地名,结果内联展开 -->
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/search_card"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top"
-        android:layout_marginHorizontal="12dp"
-        android:layout_marginTop="10dp"
-        app:cardCornerRadius="18dp"
-        app:cardElevation="4dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingStart="10dp"
-            android:paddingTop="2dp"
-            android:paddingEnd="4dp"
-            android:paddingBottom="2dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <EditText
-                    android:id="@+id/search_input"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:background="@null"
-                    android:hint="@string/search_hint"
-                    android:imeOptions="actionSearch"
-                    android:inputType="text"
-                    android:textSize="14sp" />
-
-                <Button
-                    android:id="@+id/btn_search"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/btn_search" />
-            </LinearLayout>
-
-            <ListView
-                android:id="@+id/search_results"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:divider="@null"
-                android:dividerHeight="0dp"
-                android:visibility="gone" />
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
-
-    <TextView
-        android:id="@+id/hint_top"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top|center_horizontal"
-        android:layout_marginTop="76dp"
-        android:background="#66000000"
-        android:paddingHorizontal="12dp"
-        android:paddingVertical="6dp"
-        android:text="@string/hint_longpress"
-        android:textColor="#FFFFFF"
-        android:textSize="12sp" />
-
-    <!-- 全屏页:路线库(独立整页,无地图;导航栏在更上层,可随时切走) -->
+    <!-- 主体:内容区(权重占满导航之上) + 开跑条 + 底部导航 -->
     <LinearLayout
-        android:id="@+id/panel_library"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#FFFFFFFF"
-        android:orientation="vertical"
-        android:paddingStart="24dp"
-        android:paddingTop="48dp"
-        android:paddingEnd="24dp"
-        android:visibility="gone">
+        android:orientation="vertical">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/tab_library"
-            android:textSize="22sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="@string/library_desc"
-            android:textSize="13sp" />
-
-        <Button
-            android:id="@+id/lib_manage"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="@string/btn_manage_routes" />
-
-        <Button
-            android:id="@+id/lib_draw"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/btn_draw" />
-    </LinearLayout>
-
-    <!-- 全屏页:信息与设置(内容可滚动) -->
-    <LinearLayout
-        android:id="@+id/panel_settings"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="#FFFFFFFF"
-        android:orientation="vertical"
-        android:visibility="gone">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="24dp"
-            android:layout_marginTop="48dp"
-            android:text="@string/tab_settings"
-            android:textSize="22sp"
-            android:textStyle="bold" />
-
-        <com.google.android.material.button.MaterialButtonToggleGroup
-            android:id="@+id/settings_tabs"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="24dp"
-            android:layout_marginTop="12dp"
-            app:checkedButton="@+id/btn_stab_map"
-            app:selectionRequired="true"
-            app:singleSelection="true">
-
-            <Button
-                android:id="@+id/btn_stab_map"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/stab_map" />
-
-            <Button
-                android:id="@+id/btn_stab_update"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:layout_weight="1"
-                android:text="@string/stab_update" />
-
-            <Button
-                android:id="@+id/btn_stab_donate"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:layout_weight="1"
-                android:text="@string/stab_donate" />
-        </com.google.android.material.button.MaterialButtonToggleGroup>
-
-        <ScrollView
+        <!-- 内容区:定位/路线 Tab 显示地图与卡片;库/设置 Tab 显示整页 -->
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_marginTop="8dp"
-            android:layout_weight="1"
-            android:fillViewport="true">
+            android:layout_weight="1">
 
-            <LinearLayout
+            <!-- 共享底层地图:定位/路线 Tab 在它上面操作(库/设置页时不渲染) -->
+            <com.amap.api.maps.TextureMapView
+                android:id="@+id/map_view"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+            <!-- 定位Tab:屏幕中心大头针,拖动地图把针尖对准目标 -->
+            <ImageView
+                android:id="@+id/map_crosshair"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_gravity="center"
+                android:contentDescription="@string/hint_center"
+                android:src="@drawable/ic_map_pin"
+                android:visibility="gone" />
+
+            <!-- 顶部悬浮搜索卡(学参考项目 SpoofingSearchBar):输入地名,结果内联展开 -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/search_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingHorizontal="24dp"
-                android:paddingBottom="24dp">
+                android:layout_gravity="top"
+                android:layout_marginHorizontal="12dp"
+                android:layout_marginTop="10dp"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="4dp">
 
-                <!-- 子页1:地图相关设置 -->
                 <LinearLayout
-                    android:id="@+id/settings_page_map"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/settings_engine"
-                        android:textSize="13sp" />
-
-                    <RadioGroup
-                        android:id="@+id/engine_group"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:orientation="horizontal">
-
-                        <RadioButton
-                            android:id="@+id/rb_amap"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:checked="true"
-                            android:text="@string/engine_amap" />
-
-                        <RadioButton
-                            android:id="@+id/rb_baidu"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="16dp"
-                            android:text="@string/engine_baidu" />
-                    </RadioGroup>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="20dp"
-                        android:text="@string/settings_auth"
-                        android:textSize="13sp" />
-
-                    <TextView
-                        android:id="@+id/set_auth_status"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textSize="15sp" />
-
-                    <Button
-                        android:id="@+id/btn_open_dev"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="@string/btn_open_dev" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="20dp"
-                        android:text="@string/settings_maptype"
-                        android:textSize="13sp" />
-
-                    <RadioGroup
-                        android:id="@+id/maptype_group"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:orientation="horizontal">
-
-                        <RadioButton
-                            android:id="@+id/rb_map_normal"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:checked="true"
-                            android:text="@string/maptype_normal" />
-
-                        <RadioButton
-                            android:id="@+id/rb_map_sat"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="16dp"
-                            android:text="@string/maptype_sat" />
-                    </RadioGroup>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="20dp"
-                        android:text="@string/settings_coordsys"
-                        android:textSize="13sp" />
-
-                    <RadioGroup
-                        android:id="@+id/coord_group"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:orientation="horizontal">
-
-                        <RadioButton
-                            android:id="@+id/rb_coord_wgs"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:checked="true"
-                            android:text="@string/coord_wgs" />
-
-                        <RadioButton
-                            android:id="@+id/rb_coord_gcj"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="12dp"
-                            android:text="@string/coord_gcj" />
-
-                        <RadioButton
-                            android:id="@+id/rb_coord_bd"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="12dp"
-                            android:text="@string/coord_bd" />
-                    </RadioGroup>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:text="@string/coordsys_desc"
-                        android:textSize="11sp" />
+                    android:orientation="vertical"
+                    android:paddingStart="10dp"
+                    android:paddingTop="2dp"
+                    android:paddingEnd="4dp"
+                    android:paddingBottom="2dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="20dp"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/settings_wobble"
-                            android:textSize="13sp" />
-
-                        <com.google.android.material.switchmaterial.SwitchMaterial
-                            android:id="@+id/wobble_switch"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:checked="true" />
-                    </LinearLayout>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="20dp"
-                        android:text="@string/settings_amap_key"
-                        android:textSize="15sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="@string/amap_key_notice"
-                        android:textSize="11sp" />
-
-                    <Button
-                        android:id="@+id/btn_open_amap"
-                        style="@style/Widget.Material3.Button.TextButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:paddingStart="0dp"
-                        android:paddingEnd="0dp"
-                        android:text="@string/btn_open_amap"
-                        android:textSize="12sp" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:id="@+id/pkg_value"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/app_package_name"
-                            android:textIsSelectable="true"
-                            android:textSize="11sp"
-                            android:typeface="monospace" />
-
-                        <Button
-                            android:id="@+id/btn_copy_pkg"
-                            style="@style/Widget.Material3.Button.TonalButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/btn_copy_pkg" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:id="@+id/sha1_value"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:textIsSelectable="true"
-                            android:textSize="11sp"
-                            android:typeface="monospace" />
-
-                        <Button
-                            android:id="@+id/btn_copy_sha1"
-                            style="@style/Widget.Material3.Button.TonalButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/btn_copy_sha1" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
                         <EditText
-                            android:id="@+id/user_amap_key_input"
+                            android:id="@+id/search_input"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:hint="@string/amap_key_hint"
+                            android:background="@null"
+                            android:hint="@string/search_hint"
+                            android:imeOptions="actionSearch"
                             android:inputType="text"
-                            android:textSize="13sp" />
+                            android:textSize="14sp" />
 
                         <Button
-                            android:id="@+id/btn_save_key"
+                            android:id="@+id/btn_search"
+                            style="@style/Widget.Material3.Button.TonalButton"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:text="@string/btn_save_key" />
+                            android:text="@string/btn_search" />
+                    </LinearLayout>
+
+                    <ListView
+                        android:id="@+id/search_results"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:divider="@null"
+                        android:dividerHeight="0dp"
+                        android:visibility="gone" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:id="@+id/hint_top"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top|center_horizontal"
+                android:layout_marginTop="76dp"
+                android:background="#66000000"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
+                android:text="@string/hint_longpress"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp" />
+
+            <!-- 地图Tab的卡片面板(贴内容区底部) -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom">
+
+                <!-- 定位:单点驻留 -->
+                <LinearLayout
+                    android:id="@+id/panel_location"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/panel_bg"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <Button
+                        android:id="@+id/btn_apply_location"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/btn_apply_location" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/btn_fav_add"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="4dp"
+                            android:layout_weight="1"
+                            android:text="@string/btn_fav_add" />
+
+                        <Button
+                            android:id="@+id/btn_fav_list"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:layout_weight="1"
+                            android:text="@string/btn_fav_list" />
                     </LinearLayout>
 
                     <TextView
-                        android:id="@+id/key_status"
+                        android:id="@+id/manual_coord_label"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
+                        android:layout_marginTop="8dp"
                         android:textSize="12sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <EditText
+                            android:id="@+id/input_man_lat"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="4dp"
+                            android:layout_weight="1"
+                            android:hint="@string/hint_lat"
+                            android:inputType="numberSigned"
+                            android:textSize="13sp" />
+
+                        <EditText
+                            android:id="@+id/input_man_lng"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:layout_weight="1"
+                            android:hint="@string/hint_lon"
+                            android:inputType="numberSigned"
+                            android:textSize="13sp" />
+
+                        <Button
+                            android:id="@+id/btn_apply_coord"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/btn_apply" />
+                    </LinearLayout>
+
+                    <Button
+                        android:id="@+id/loc_pick"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/btn_pick" />
                 </LinearLayout>
 
-                <!-- 子页2:更新与反馈 -->
+                <!-- 路线:自定义路线开跑(预设环线已移除) -->
                 <LinearLayout
-                    android:id="@+id/settings_page_update"
+                    android:id="@+id/panel_route"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:background="@drawable/panel_bg"
                     android:orientation="vertical"
+                    android:padding="16dp"
                     android:visibility="gone">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/settings_feedback"
-                        android:textSize="13sp" />
-
-                    <Button
-                        android:id="@+id/btn_export_diag"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="@string/btn_export_diag" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="20dp"
-                        android:text="@string/settings_update"
+                        android:text="@string/panel_route_hint"
                         android:textSize="13sp" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:gravity="center_vertical"
+                        android:layout_marginTop="8dp"
                         android:orientation="horizontal">
 
-                        <TextView
-                            android:id="@+id/set_version"
+                        <Button
+                            android:id="@+id/btn_draw"
+                            style="@style/Widget.Material3.Button.TonalButton"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
+                            android:layout_marginEnd="4dp"
                             android:layout_weight="1"
-                            android:textSize="12sp" />
+                            android:text="@string/btn_draw" />
 
                         <Button
-                            android:id="@+id/btn_check_update"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="wrap_content"
+                            android:id="@+id/btn_my"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:text="@string/btn_check_update" />
+                            android:layout_marginStart="4dp"
+                            android:layout_weight="1"
+                            android:text="@string/btn_my" />
                     </LinearLayout>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:text="@string/settings_about"
-                        android:textSize="12sp" />
                 </LinearLayout>
+            </FrameLayout>
 
-                <!-- 子页3:打赏(待开发) -->
-                <LinearLayout
-                    android:id="@+id/settings_page_donate"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:visibility="gone">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/donate_wip"
-                        android:textSize="16sp" />
-                </LinearLayout>
-            </LinearLayout>
-        </ScrollView>
-    </LinearLayout>
-    <!-- 底部堆叠:地图Tab面板 + 开跑条 + 导航(始终最上层,任何页都能切走) -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:orientation="vertical">
-
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <!-- 定位:单点驻留 -->
+            <!-- 全屏页:路线库(独立整页,无地图;内容区不含导航,不会被遮挡) -->
             <LinearLayout
-                android:id="@+id/panel_location"
+                android:id="@+id/panel_library"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/panel_bg"
+                android:layout_height="match_parent"
+                android:background="#FFFFFFFF"
                 android:orientation="vertical"
-                android:padding="16dp">
-
-                <Button
-                    android:id="@+id/btn_apply_location"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/btn_apply_location" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:orientation="horizontal">
-
-                    <Button
-                        android:id="@+id/btn_fav_add"
-                        style="@style/Widget.Material3.Button.TonalButton"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="4dp"
-                        android:layout_weight="1"
-                        android:text="@string/btn_fav_add" />
-
-                    <Button
-                        android:id="@+id/btn_fav_list"
-                        style="@style/Widget.Material3.Button.TonalButton"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="4dp"
-                        android:layout_weight="1"
-                        android:text="@string/btn_fav_list" />
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/manual_coord_label"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:textSize="12sp" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                    <EditText
-                        android:id="@+id/input_man_lat"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="4dp"
-                        android:layout_weight="1"
-                        android:hint="@string/hint_lat"
-                        android:inputType="numberSigned"
-                        android:textSize="13sp" />
-
-                    <EditText
-                        android:id="@+id/input_man_lng"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="4dp"
-                        android:layout_weight="1"
-                        android:hint="@string/hint_lon"
-                        android:inputType="numberSigned"
-                        android:textSize="13sp" />
-
-                    <Button
-                        android:id="@+id/btn_apply_coord"
-                        style="@style/Widget.Material3.Button.TonalButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/btn_apply" />
-                </LinearLayout>
-
-                <Button
-                    android:id="@+id/loc_pick"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/btn_pick" />
-            </LinearLayout>
-
-            <!-- 路线:自定义路线开跑(预设环线已移除) -->
-            <LinearLayout
-                android:id="@+id/panel_route"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/panel_bg"
-                android:orientation="vertical"
-                android:padding="16dp"
+                android:paddingStart="24dp"
+                android:paddingTop="48dp"
+                android:paddingEnd="24dp"
                 android:visibility="gone">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/panel_route_hint"
+                    android:text="@string/tab_library"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/library_desc"
                     android:textSize="13sp" />
+
+                <Button
+                    android:id="@+id/lib_manage"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:text="@string/btn_manage_routes" />
+
+                <Button
+                    android:id="@+id/lib_draw"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/btn_draw" />
+            </LinearLayout>
+
+            <!-- 全屏页:信息与设置(内容可滚动) -->
+            <LinearLayout
+                android:id="@+id/panel_settings"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#FFFFFFFF"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="24dp"
+                    android:layout_marginTop="48dp"
+                    android:text="@string/tab_settings"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.button.MaterialButtonToggleGroup
+                    android:id="@+id/settings_tabs"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="24dp"
+                    android:layout_marginTop="12dp"
+                    app:checkedButton="@+id/btn_stab_map"
+                    app:selectionRequired="true"
+                    app:singleSelection="true">
+
+                    <Button
+                        android:id="@+id/btn_stab_map"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/stab_map" />
+
+                    <Button
+                        android:id="@+id/btn_stab_update"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:text="@string/stab_update" />
+
+                    <Button
+                        android:id="@+id/btn_stab_donate"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:text="@string/stab_donate" />
+                </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                <ScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_marginTop="8dp"
+                    android:layout_weight="1"
+                    android:fillViewport="true">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="24dp"
+                        android:paddingBottom="24dp">
+
+                        <!-- 子页1:地图相关设置 -->
+                        <LinearLayout
+                            android:id="@+id/settings_page_map"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/settings_engine"
+                                android:textSize="13sp" />
+
+                            <RadioGroup
+                                android:id="@+id/engine_group"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:orientation="horizontal">
+
+                                <RadioButton
+                                    android:id="@+id/rb_amap"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:checked="true"
+                                    android:text="@string/engine_amap" />
+
+                                <RadioButton
+                                    android:id="@+id/rb_baidu"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="16dp"
+                                    android:text="@string/engine_baidu" />
+                            </RadioGroup>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="20dp"
+                                android:text="@string/settings_auth"
+                                android:textSize="13sp" />
+
+                            <TextView
+                                android:id="@+id/set_auth_status"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textSize="15sp" />
+
+                            <Button
+                                android:id="@+id/btn_open_dev"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="@string/btn_open_dev" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="20dp"
+                                android:text="@string/settings_maptype"
+                                android:textSize="13sp" />
+
+                            <RadioGroup
+                                android:id="@+id/maptype_group"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:orientation="horizontal">
+
+                                <RadioButton
+                                    android:id="@+id/rb_map_normal"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:checked="true"
+                                    android:text="@string/maptype_normal" />
+
+                                <RadioButton
+                                    android:id="@+id/rb_map_sat"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="16dp"
+                                    android:text="@string/maptype_sat" />
+                            </RadioGroup>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="20dp"
+                                android:text="@string/settings_coordsys"
+                                android:textSize="13sp" />
+
+                            <RadioGroup
+                                android:id="@+id/coord_group"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:orientation="horizontal">
+
+                                <RadioButton
+                                    android:id="@+id/rb_coord_wgs"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:checked="true"
+                                    android:text="@string/coord_wgs" />
+
+                                <RadioButton
+                                    android:id="@+id/rb_coord_gcj"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="12dp"
+                                    android:text="@string/coord_gcj" />
+
+                                <RadioButton
+                                    android:id="@+id/rb_coord_bd"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="12dp"
+                                    android:text="@string/coord_bd" />
+                            </RadioGroup>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:text="@string/coordsys_desc"
+                                android:textSize="11sp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="20dp"
+                                android:text="@string/settings_amap_key"
+                                android:textSize="15sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="@string/amap_key_notice"
+                                android:textSize="11sp" />
+
+                            <Button
+                                android:id="@+id/btn_open_amap"
+                                style="@style/Widget.Material3.Button.TextButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:paddingStart="0dp"
+                                android:paddingEnd="0dp"
+                                android:text="@string/btn_open_amap"
+                                android:textSize="12sp" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:id="@+id/pkg_value"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="@string/app_package_name"
+                                    android:textIsSelectable="true"
+                                    android:textSize="11sp"
+                                    android:typeface="monospace" />
+
+                                <Button
+                                    android:id="@+id/btn_copy_pkg"
+                                    style="@style/Widget.Material3.Button.TonalButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/btn_copy_pkg" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:id="@+id/sha1_value"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:textIsSelectable="true"
+                                    android:textSize="11sp"
+                                    android:typeface="monospace" />
+
+                                <Button
+                                    android:id="@+id/btn_copy_sha1"
+                                    style="@style/Widget.Material3.Button.TonalButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/btn_copy_sha1" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <EditText
+                                    android:id="@+id/user_amap_key_input"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:hint="@string/amap_key_hint"
+                                    android:inputType="text"
+                                    android:textSize="13sp" />
+
+                                <Button
+                                    android:id="@+id/btn_save_key"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="6dp"
+                                    android:text="@string/btn_save_key" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/key_status"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:textSize="12sp" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="20dp"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="@string/settings_wobble"
+                                    android:textSize="13sp" />
+
+                                <com.google.android.material.switchmaterial.SwitchMaterial
+                                    android:id="@+id/wobble_switch"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:checked="true" />
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <!-- 子页2:更新与反馈 -->
+                        <LinearLayout
+                            android:id="@+id/settings_page_update"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:visibility="gone">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/settings_feedback"
+                                android:textSize="13sp" />
+
+                            <Button
+                                android:id="@+id/btn_export_diag"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="@string/btn_export_diag" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="20dp"
+                                android:text="@string/settings_update"
+                                android:textSize="13sp" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:id="@+id/set_version"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:textSize="12sp" />
+
+                                <Button
+                                    android:id="@+id/btn_check_update"
+                                    style="@style/Widget.Material3.Button.OutlinedButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/btn_check_update" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="16dp"
+                                android:text="@string/settings_about"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <!-- 子页3:打赏(待开发) -->
+                        <LinearLayout
+                            android:id="@+id/settings_page_donate"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:visibility="gone">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/donate_wip"
+                                android:textSize="16sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </ScrollView>
+            </LinearLayout>
+
+            <!-- 常驻开跑条 -->
+            <LinearLayout
+                android:id="@+id/running_bar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/panel_bg"
+                android:orientation="vertical"
+                android:paddingStart="16dp"
+                android:paddingTop="10dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="12dp">
+
+                <TextView
+                    android:id="@+id/status_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/speed_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <SeekBar
+                    android:id="@+id/speed_seek"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:max="59"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp"
+                    android:progressTint="#FF8B5E3C"
+                    android:thumbTint="#FF8B5E3C" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="4dp"
                     android:orientation="horizontal">
 
                     <Button
-                        android:id="@+id/btn_draw"
-                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:id="@+id/btn_start"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="4dp"
+                        android:layout_marginEnd="6dp"
                         android:layout_weight="1"
-                        android:text="@string/btn_draw" />
+                        android:text="@string/btn_start" />
 
                     <Button
-                        android:id="@+id/btn_my"
-                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:id="@+id/btn_stop"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="4dp"
+                        android:layout_marginStart="6dp"
                         android:layout_weight="1"
-                        android:text="@string/btn_my" />
+                        android:text="@string/btn_stop" />
                 </LinearLayout>
             </LinearLayout>
+
+            <com.google.android.material.bottomnavigation.BottomNavigationView
+                android:id="@+id/bottom_nav"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:menu="@menu/bottom_nav"
+                app:labelVisibilityMode="labeled" />
         </FrameLayout>
-
-        <!-- 常驻开跑条 -->
-        <LinearLayout
-            android:id="@+id/running_bar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/panel_bg"
-            android:orientation="vertical"
-            android:paddingStart="16dp"
-            android:paddingTop="10dp"
-            android:paddingEnd="16dp"
-            android:paddingBottom="12dp">
-
-            <TextView
-                android:id="@+id/status_text"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="12sp" />
-
-            <TextView
-                android:id="@+id/speed_label"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:textSize="15sp"
-                android:textStyle="bold" />
-
-            <SeekBar
-                android:id="@+id/speed_seek"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:max="59"
-                android:paddingTop="8dp"
-                android:paddingBottom="8dp"
-                android:progressTint="#FF8B5E3C"
-                android:thumbTint="#FF8B5E3C" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:orientation="horizontal">
-
-                <Button
-                    android:id="@+id/btn_start"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="6dp"
-                    android:layout_weight="1"
-                    android:text="@string/btn_start" />
-
-                <Button
-                    android:id="@+id/btn_stop"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
-                    android:layout_weight="1"
-                    android:text="@string/btn_stop" />
-            </LinearLayout>
-        </LinearLayout>
-
-        <com.google.android.material.bottomnavigation.BottomNavigationView
-            android:id="@+id/bottom_nav"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:menu="@menu/bottom_nav"
-            app:labelVisibilityMode="labeled" />
     </LinearLayout>
 
-
-    <!-- 启动加载遮罩:二帧比格奔跑动画,地图就绪后淡出 -->
+    <!-- 启动加载遮罩:二帧比格奔跑动画,地图就绪后淡出(根层,盖住含导航的全部) -->
     <LinearLayout
         android:id="@+id/splash_root"
         android:layout_width="match_parent"
