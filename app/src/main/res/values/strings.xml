@@ -76,6 +76,10 @@
 
     <string name="settings_donate">支持作者</string>
     <string name="btn_donate">请作者喝杯奶茶</string>
+    <string name="stab_map">地图设置</string>
+    <string name="stab_update">更新</string>
+    <string name="stab_donate">打赏</string>
+    <string name="donate_wip">🚧 打赏功能开发中,敬请期待</string>
     <string name="donate_wechat_label">微信收款码(截图扫码)</string>
     <string name="donate_alipay_label">支付宝收款码(截图扫码)</string>
     <string name="settings_feedback">问题反馈</string>

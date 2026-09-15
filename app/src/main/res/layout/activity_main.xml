@@ -84,6 +84,55 @@
             android:textSize="22sp"
             android:textStyle="bold" />
 
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/settings_tabs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            app:checkedButton="@+id/btn_stab_map"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <Button
+                android:id="@+id/btn_stab_map"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/stab_map" />
+
+            <Button
+                android:id="@+id/btn_stab_update"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="@string/stab_update" />
+
+            <Button
+                android:id="@+id/btn_stab_donate"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="@string/stab_donate" />
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="8dp"
+            android:layout_weight="1">
+
+            <!-- 子页1:地图相关设置 -->
+            <LinearLayout
+                android:id="@+id/settings_page_map"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical">
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -296,20 +345,15 @@
                 android:layout_height="wrap_content"
                 android:checked="true" />
         </LinearLayout>
+            </LinearLayout>
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="@string/settings_donate"
-            android:textSize="13sp" />
-
-        <Button
-            android:id="@+id/btn_donate"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="@string/btn_donate" />
+            <!-- 子页2:更新与反馈 -->
+            <LinearLayout
+                android:id="@+id/settings_page_update"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:visibility="gone">
 
         <TextView
             android:layout_width="wrap_content"
@@ -361,6 +405,24 @@
             android:layout_marginTop="4dp"
             android:text="@string/settings_about"
             android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- 子页3:打赏(待开发) -->
+            <LinearLayout
+                android:id="@+id/settings_page_donate"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/donate_wip"
+                    android:textSize="16sp" />
+            </LinearLayout>
+        </FrameLayout>
     </LinearLayout>
 
     <!-- 底部堆叠:地图Tab面板 + 开跑条 + 导航(始终最上层,任何页都能切走) -->

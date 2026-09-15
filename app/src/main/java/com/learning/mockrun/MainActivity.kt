@@ -495,34 +495,31 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.btn_apply_coord).setOnClickListener { applyManualCoord() }
         refreshManualLabel()
-        findViewById<Button>(R.id.btn_donate).setOnClickListener { showDonateDialog() }
         findViewById<Button>(R.id.btn_export_diag).setOnClickListener { exportDiagnostics() }
         setupAmapKeySection()
+        setupSettingsTabs()
     }
 
-    /** 打赏弹窗:收款码图片放 assets(qr_wechat.png / qr_alipay.png),替换图片即生效 */
-    private fun showDonateDialog() {
-        val view = layoutInflater.inflate(R.layout.donation_dialog, null)
-        val wechat = loadAssetBitmap("qr_wechat.png")
-        val alipay = loadAssetBitmap("qr_alipay.png")
-        if (wechat == null && alipay == null) {
-            Toast.makeText(this, R.string.donate_missing, Toast.LENGTH_SHORT).show()
-            return
-        }
-        if (wechat != null) view.findViewById<ImageView>(R.id.qr_wechat).setImageBitmap(wechat)
-        if (alipay != null) view.findViewById<ImageView>(R.id.qr_alipay).setImageBitmap(alipay)
-        androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle(R.string.settings_donate)
-            .setView(view)
-            .setPositiveButton(android.R.string.ok, null)
-            .show()
+    /** 设置页三段子页:地图设置 / 更新 / 打赏(待开发) */
+    private fun setupSettingsTabs() {
+        val pages = listOf(
+            findViewById<View>(R.id.settings_page_map),
+            findViewById<View>(R.id.settings_page_update),
+            findViewById<View>(R.id.settings_page_donate),
+        )
+        findViewById<com.google.android.material.button.MaterialButtonToggleGroup>(R.id.settings_tabs)
+            .addOnButtonCheckedListener { _, checkedId, isChecked ->
+                if (!isChecked) return@addOnButtonCheckedListener
+                val idx = when (checkedId) {
+                    R.id.btn_stab_update -> 1
+                    R.id.btn_stab_donate -> 2
+                    else -> 0
+                }
+                pages.forEachIndexed { i, v -> v.visibility = if (i == idx) View.VISIBLE else View.GONE }
+            }
+        pages.forEachIndexed { i, v -> v.visibility = if (i == 0) View.VISIBLE else View.GONE }
     }
 
-    private fun loadAssetBitmap(name: String) = runCatching {
-        assets.open(name).use { android.graphics.BitmapFactory.decodeStream(it) }
-    }.getOrNull()
-
-    /** 诊断包:环境+崩溃记录+本应用日志,写 cache/share 后走系统分享发给作者 */
     private fun exportDiagnostics() {
         val sb = StringBuilder(CrashReporter.buildText(this))
         val crashes = CrashReporter.latestCrashes(this)
