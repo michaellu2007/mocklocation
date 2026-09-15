@@ -12,6 +12,7 @@ class MockRunApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        CrashReporter.install(this)
         val prefs = getSharedPreferences("settings", MODE_PRIVATE)
         prefs.edit().putInt("launch_count", prefs.getInt("launch_count", 0) + 1).apply()
 

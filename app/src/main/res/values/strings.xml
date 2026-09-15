@@ -74,6 +74,15 @@
     <string name="nag_title">请配置你自己的高德 Key</string>
     <string name="nag_msg">你已使用公共 Key 启动 %1$d 次。公共额度有限,请到「信息与设置 → 高德 Key(个人配置)」按教程免费申请并填入自己的 Key,谢谢配合!</string>
 
+    <string name="settings_donate">支持作者</string>
+    <string name="btn_donate">请作者喝杯奶茶</string>
+    <string name="donate_wechat_label">微信收款码(截图扫码)</string>
+    <string name="donate_alipay_label">支付宝收款码(截图扫码)</string>
+    <string name="settings_feedback">问题反馈</string>
+    <string name="btn_export_diag">导出诊断信息</string>
+    <string name="diag_shared">诊断包已生成,请发送给作者</string>
+    <string name="donate_missing">收款码图片还没放好,联系作者吧</string>
+
     <string name="eula_title">用户协议与免责声明</string>
     <string name="eula_agree">同意并继续</string>
     <string name="eula_decline">不同意并退出</string>

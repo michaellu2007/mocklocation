@@ -495,7 +495,58 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.btn_apply_coord).setOnClickListener { applyManualCoord() }
         refreshManualLabel()
+        findViewById<Button>(R.id.btn_donate).setOnClickListener { showDonateDialog() }
+        findViewById<Button>(R.id.btn_export_diag).setOnClickListener { exportDiagnostics() }
         setupAmapKeySection()
+    }
+
+    /** 打赏弹窗:收款码图片放 assets(qr_wechat.png / qr_alipay.png),替换图片即生效 */
+    private fun showDonateDialog() {
+        val view = layoutInflater.inflate(R.layout.donation_dialog, null)
+        val wechat = loadAssetBitmap("qr_wechat.png")
+        val alipay = loadAssetBitmap("qr_alipay.png")
+        if (wechat == null && alipay == null) {
+            Toast.makeText(this, R.string.donate_missing, Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (wechat != null) view.findViewById<ImageView>(R.id.qr_wechat).setImageBitmap(wechat)
+        if (alipay != null) view.findViewById<ImageView>(R.id.qr_alipay).setImageBitmap(alipay)
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(R.string.settings_donate)
+            .setView(view)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+    }
+
+    private fun loadAssetBitmap(name: String) = runCatching {
+        assets.open(name).use { android.graphics.BitmapFactory.decodeStream(it) }
+    }.getOrNull()
+
+    /** 诊断包:环境+崩溃记录+本应用日志,写 cache/share 后走系统分享发给作者 */
+    private fun exportDiagnostics() {
+        val sb = StringBuilder(CrashReporter.buildText(this))
+        val crashes = CrashReporter.latestCrashes(this)
+        if (crashes.isNotEmpty()) {
+            sb.appendLine().appendLine("== 历史崩溃记录 ==")
+            crashes.forEach { f ->
+                sb.appendLine("--- ${f.name} ---")
+                sb.appendLine(runCatching { f.readText() }.getOrDefault("(读取失败)"))
+            }
+        }
+        val safeName = "MockRun诊断-" + java.text.SimpleDateFormat("MMdd-HHmm", java.util.Locale.getDefault())
+            .format(java.util.Date()) + ".txt"
+        val dir = java.io.File(cacheDir, "share").apply { mkdirs() }
+        val file = java.io.File(dir, safeName)
+        file.writeText(sb.toString())
+
+        val uri = androidx.core.content.FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            clipData = android.content.ClipData.newRawUri(safeName, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        startActivity(Intent.createChooser(intent, getString(R.string.diag_shared)))
     }
 
     /** 高德个人 Key 区块:显示包名+本机SHA1,保存用户Key,公共额度状态 */
