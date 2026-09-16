@@ -4,6 +4,12 @@
 
     <string name="phase1_status">包名:%1$s\n模拟位置授权:%2$s</string>
     <string name="btn_open_dev">去开发者选项授权</string>
+    <string name="btn_float">悬浮窗开关</string>
+    <string name="float_title">比格运行中</string>
+    <string name="float_status">%1$s · %2$.1f m/s</string>
+    <string name="float_stop">停止</string>
+    <string name="toast_float_need_run">先开跑再开悬浮窗</string>
+    <string name="toast_float_perm">请先允许「显示在其他应用上层」</string>
     <string name="btn_start">开跑</string>
     <string name="btn_stop">停止</string>
 
@@ -67,11 +73,17 @@
     <string name="settings_update">版本与更新</string>
     <string name="update_checking">正在检查更新…</string>
     <string name="update_none">当前 v%1$s 已是最新</string>
-    <string name="update_failed_title">检查更新失败</string>
-    <string name="update_failed">原因:%1$s(需要能访问 GitHub,国内网络可能不稳定)</string>
     <string name="update_available_title">发现新版本 v%1$s</string>
-    <string name="update_goto_page">将打开发布页,下载新 APK 覆盖安装即可(更新不强制)</string>
-    <string name="btn_goto_download">前往下载</string>
+    <string name="update_check_quiet_fail">没连上更新服务,稍后再试</string>
+    <string name="update_ready_hint">将在应用内下载新 APK 并引导安装;也可以打开发布页手动下载。</string>
+    <string name="btn_download_install">下载并安装</string>
+    <string name="btn_open_release_page">打开发布页</string>
+    <string name="btn_cancel_download">取消下载</string>
+    <string name="btn_retry">重试</string>
+    <string name="update_downloading_title">正在下载 v%1$s</string>
+    <string name="update_downloading_progress">已下载 %1$d%%</string>
+    <string name="update_download_failed">下载失败:%1$s(镜像与直连都已尝试)</string>
+    <string name="update_install_failed">无法启动安装,请到系统设置允许本应用「安装未知应用」</string>
     <string name="btn_check_update">检查更新</string>
     <string name="btn_apply">定位</string>
     <string name="btn_apply_location">应用定位</string>
@@ -108,7 +120,15 @@
     <string name="stab_update">更新</string>
     <string name="stab_donate">打赏</string>
     <string name="fab_run_desc">开始或停止模拟</string>
-    <string name="donate_wip">🚧 打赏功能开发中,敬请期待</string>
+    <string name="donate_title">助力作者养小比</string>
+    <string name="donate_subtitle">微信扫一扫,请小比吃顿好的</string>
+    <string name="channel_title">QQ 频道交流群</string>
+    <string name="channel_subtitle">比格在校园 · 频道号 pd06300811</string>
+    <string name="channel_joke">欢迎 <strike>技术交流</strike> 吹牛逼</string>
+    <string name="qr_hint">长按二维码可保存到相册,再用微信/扫一扫识别</string>
+    <string name="qr_saved">已保存到相册 Pictures/MockRun,去微信「扫一扫 → 相册」识别</string>
+    <string name="qr_saved_fallback">已保存:%1$s</string>
+    <string name="qr_save_fail">保存失败,截图后去相册扫也行</string>
     <string name="donate_wechat_label">微信收款码(截图扫码)</string>
     <string name="donate_alipay_label">支付宝收款码(截图扫码)</string>
     <string name="settings_feedback">问题反馈</string>

@@ -17,8 +17,18 @@
     <!-- API 33+ 前台服务常驻通知需要运行时申请 POST_NOTIFICATIONS -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- 应用内下载更新后拉起系统安装器:仅声明不会静默装,系统仍要求用户手动允许「安装未知应用」 -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <!-- 后台定位:API 30+ 必须运行时单独申请,不能和其他权限打包请求 -->
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!-- 后台保活四件套:CPU 唤醒锁 + 划卡不杀 + 被杀重建 + 电池优化白名单(白名单引导在 MainActivity) -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <!-- 悬浮窗:特殊权限,运行时经 Settings.canDrawOverlays 引导用户去系统设置授权 -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <!--
       ACCESS_MOCK_LOCATION 是 signature 级权限,仅声明不会生效。
@@ -66,7 +76,13 @@
         <service
             android:name=".MockLocationService"
             android:exported="false"
+            android:stopWithTask="false"
             android:foregroundServiceType="location" />
+
+        <!-- 运行状态悬浮窗(可拖动气泡+停止按钮) -->
+        <service
+            android:name=".FloatingPanelService"
+            android:exported="false" />
 
         <!-- 路线文件分享(收集用户上传的路线用) -->
         <provider

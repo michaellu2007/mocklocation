@@ -33,6 +33,7 @@ class MockLocationService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var player: RoutePlayer? = null
     private var running = false
+    private var wakeLock: android.os.PowerManager.WakeLock? = null
 
     private val feedTask = object : Runnable {
         override fun run() {
@@ -57,12 +58,38 @@ class MockLocationService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val pts = intent?.getDoubleArrayExtra(EXTRA_ROUTE)
+        // START_STICKY:系统杀掉后自动重建;此时 intent 为 null,用落盘的参数恢复上次路线
+        if (intent == null) {
+            val saved = restoreLastRun() ?: run {
+                stopSelf()
+                return START_NOT_STICKY
+            }
+            return startInternal(saved.name, saved.speed, saved.pts, wobble = true,
+                loopClosed = saved.loop, finishPause = false, stepJitter = true)
+        }
+        val pts = intent.getDoubleArrayExtra(EXTRA_ROUTE)
             ?: doubleArrayOf(MockLocationService.DEFAULT_LAT, DEFAULT_LON)
-        val speed = intent?.getDoubleExtra(EXTRA_SPEED, 3.0) ?: 3.0
-        val name = intent?.getStringExtra(EXTRA_NAME) ?: getString(R.string.notif_default_name)
+        val speed = intent.getDoubleExtra(EXTRA_SPEED, 3.0)
+        val name = intent.getStringExtra(EXTRA_NAME) ?: getString(R.string.notif_default_name)
+        val wobble = intent.getBooleanExtra(EXTRA_WOBBLE, true)
+        val loop = intent.getBooleanExtra(EXTRA_LOOP, false)
+        val finishPause = intent.getBooleanExtra(EXTRA_FINISH_PAUSE, false)
+        val stepJitter = intent.getBooleanExtra(EXTRA_STEP_JITTER, true)
+        saveLastRun(name, speed, pts, loop)
+        return startInternal(name, speed, pts, wobble, loop, finishPause, stepJitter)
+    }
 
+    private fun startInternal(
+        name: String,
+        speed: Double,
+        pts: DoubleArray,
+        wobble: Boolean,
+        loopClosed: Boolean,
+        finishPause: Boolean,
+        stepJitter: Boolean,
+    ): Int {
         startInForeground(name, speed)
+        acquireWakeLock()
 
         if (!installProviders()) {
             Log.e(TAG, "installProviders 失败(多半是未授权),服务退出")
@@ -74,16 +101,44 @@ class MockLocationService : Service() {
             route = pts.toList().chunked(2).map { GeoPoint(it[0], it[1]) },
             baseSpeedMps = speed,
             startElapsedNanos = SystemClock.elapsedRealtimeNanos(),
-            wobble = intent?.getBooleanExtra(EXTRA_WOBBLE, true) ?: true,
-            loopClosed = intent?.getBooleanExtra(EXTRA_LOOP, false),
-            stopAtEnd = intent?.getBooleanExtra(EXTRA_FINISH_PAUSE, false) ?: false,
-            stepJitter = intent?.getBooleanExtra(EXTRA_STEP_JITTER, true) ?: true,
+            wobble = wobble,
+            loopClosed = loopClosed,
+            stopAtEnd = finishPause,
+            stepJitter = stepJitter,
         )
         activeName = name
         running = true
         handler.post(feedTask)
         Log.i(TAG, "开始模拟「$name」 speed=$speed pts=${pts.size / 2}")
-        return START_NOT_STICKY
+        return START_STICKY
+    }
+
+    /** 用户在多任务里划掉 App:前台服务(stopWithTask=false)继续活,补一把唤醒锁 */
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        if (running) acquireWakeLock()
+    }
+
+    private fun acquireWakeLock() {
+        if (wakeLock == null) {
+            val pm = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+            wakeLock = pm.newWakeLock(
+                android.os.PowerManager.PARTIAL_WAKE_LOCK,
+                "MockRun:SpoofWakeLock"
+            ).apply { setReferenceCounted(false) }
+        }
+        if (wakeLock?.isHeld == false) {
+            // 24h 上限兜底;正常由 onDestroy 释放
+            wakeLock?.acquire(24 * 60 * 60 * 1000L)
+        }
+    }
+
+    private fun releaseWakeLock() {
+        try {
+            if (wakeLock?.isHeld == true) wakeLock?.release()
+        } catch (_: Exception) {
+        }
+        wakeLock = null
     }
 
     override fun onDestroy() {
@@ -93,6 +148,7 @@ class MockLocationService : Service() {
         currentMotion = null
         currentClean = null
         activeName = null
+        releaseWakeLock()
         for (provider in INJECTED_PROVIDERS) {
             try {
                 lm.removeTestProvider(provider)
@@ -181,8 +237,35 @@ class MockLocationService : Service() {
         }
     }
 
+    /** 被杀重建时恢复上次路线用的落盘 */
+    private fun saveLastRun(name: String, speed: Double, pts: DoubleArray, loop: Boolean) {
+        getSharedPreferences("mockrun_service", Context.MODE_PRIVATE).edit().putString(
+            LAST_RUN_KEY,
+            "$name|$speed|$loop|${pts.joinToString(",")}"
+        ).apply()
+    }
+
+    private fun restoreLastRun(): StartParams? {
+        val s = getSharedPreferences("mockrun_service", Context.MODE_PRIVATE)
+            .getString(LAST_RUN_KEY, null) ?: return null
+        return try {
+            val (name, speed, loop, arr) = s.split("|", limit = 4)
+            StartParams(name, speed.toDouble(), arr.split(",").map { it.toDouble() }.toDoubleArray(), loop == "true")
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private data class StartParams(
+        val name: String,
+        val speed: Double,
+        val pts: DoubleArray,
+        val loop: Boolean,
+    )
+
     companion object {
         private const val TAG = "MockLocationService"
+        private const val LAST_RUN_KEY = "service_last_run"
         private const val CHANNEL_ID = "mockrun_channel"
         private const val NOTIF_ID = 1
         // 对齐参考实现的回放节奏(100ms/跳);消费方按自己的请求间隔拿最新值,不受推送频率影响

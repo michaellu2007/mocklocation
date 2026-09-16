@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
     <cache-path name="shared_routes" path="share/" />
+    <!-- 更新 APK:应用内下载到 files/update/,安装时经 FileProvider 给系统安装器 -->
+    <files-path name="update" path="update/" />
 </paths>

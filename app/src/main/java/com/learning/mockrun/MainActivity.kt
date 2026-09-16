@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.drawable.AnimationDrawable
 import android.net.Uri
@@ -31,6 +32,9 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import com.amap.api.maps.AMap
 import com.amap.api.maps.CameraUpdateFactory
 import com.amap.api.maps.MapsInitializer
@@ -59,6 +63,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var speedLabel: TextView
     private lateinit var authStatusText: TextView
     private lateinit var panels: List<android.view.View>
+    private lateinit var glassPanels: List<GlassPanelView>
     private lateinit var rbAmap: RadioButton
     private lateinit var rbBaidu: RadioButton
     private lateinit var mapCrosshair: ImageView
@@ -132,6 +137,18 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+    // 应用内更新:进度对话框 / 下载句柄 / 待安装 APK(「安装未知应用」授权回来续装)
+    private var updateDialog: androidx.appcompat.app.AlertDialog? = null
+    private var updateDownload: UpdateDownloader.Handle? = null
+    private var pendingInstallApk: java.io.File? = null
+
+    private val installPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            if (packageManager.canRequestPackageInstalls()) {
+                pendingInstallApk?.let(::installApk)
+            }
+        }
+
     private val ticker = object : Runnable {
         override fun run() {
             // 显示走干净通道(零噪声,参考实现同款分离);注入走 currentMotion(带波动)
@@ -164,6 +181,7 @@ class MainActivity : AppCompatActivity() {
         MapsInitializer.updatePrivacyAgree(this, true)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        applyEdgeToEdgeInsets()
 
         anchor = loadAnchor()
         // 自动恢复上次使用的自定义路线(重启不丢)
@@ -184,6 +202,11 @@ class MainActivity : AppCompatActivity() {
             findViewById(R.id.panel_library),
             findViewById(R.id.panel_settings),
         )
+        glassPanels = listOf(
+            findViewById(R.id.panel_location),
+            findViewById(R.id.panel_route),
+            findViewById(R.id.running_bar),
+        )
         mapView.onCreate(savedInstanceState)
 
 
@@ -200,6 +223,34 @@ class MainActivity : AppCompatActivity() {
         if (BuildConfig.KEY_ENFORCE) maybeForceUpdate() // 分发版:启动即静默检查,发现新版必须更新
 
         anchor?.let { setAnchor(it, animateCamera = false) }
+    }
+
+    /**
+     * edge-to-edge 适配(targetSdk 36 起系统强制开启)。
+     *
+     * 不处理的话窗口内容会一路铺到状态栏底下:搜索卡 layout_marginTop=10dp,
+     * 正好整个落在状态栏的触摸区里 —— 点它等于点状态栏,这就是"tab1 搜索框点不进去"
+     * 的根因。Android 12 不强制 edge-to-edge,所以那边看着是正常的。
+     *
+     * 做法:显式声明不要系统替我们 fit,然后自己把 systemBars + 挖孔 inset 垫成
+     * root_main 的 padding,内容回到安全区(顶部避开状态栏,底部避开手势条)。
+     * 垫的是 root_main,启动页 splash_root 是它的兄弟节点,依旧全屏铺满。
+     */
+    private fun applyEdgeToEdgeInsets() {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        val root = findViewById<View>(R.id.root_main)
+        ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val cut = insets.getInsets(WindowInsetsCompat.Type.displayCutout())
+            v.setPadding(
+                maxOf(bars.left, cut.left),
+                maxOf(bars.top, cut.top),
+                maxOf(bars.right, cut.right),
+                maxOf(bars.bottom, cut.bottom),
+            )
+            insets
+        }
+        ViewCompat.requestApplyInsets(root)
     }
 
     /** 首次启动用户协议:不可跳过,不同意即退出 */
@@ -221,15 +272,23 @@ class MainActivity : AppCompatActivity() {
     private fun setupMap() {
         val map = mapView.map
         aMap = map
+        glassPanels.forEach { it.bind(mapView) }
         map.uiSettings.isZoomControlsEnabled = false
         map.uiSettings.isCompassEnabled = false
         map.uiSettings.isMyLocationButtonEnabled = false
         // 地图就绪(瓦片加载完成)即淡出启动页;key 无效等异常由 4s 超时兜底
-        map.setOnMapLoadedListener { hideSplash() }
+        map.setOnMapLoadedListener {
+            hideSplash()
+            glassPanels.forEach { it.refresh() }
+        }
         // 定位Tab:拖到哪就模拟到哪——相机停稳后,锚点自动取屏幕中心大头针处
         map.setOnCameraChangeListener(object : AMap.OnCameraChangeListener {
-            override fun onCameraChange(pos: com.amap.api.maps.model.CameraPosition?) {}
+            override fun onCameraChange(pos: com.amap.api.maps.model.CameraPosition?) {
+                // 拖动中持续抓帧,毛玻璃跟随地图
+                glassPanels.forEach { it.refresh() }
+            }
             override fun onCameraChangeFinish(pos: com.amap.api.maps.model.CameraPosition?) {
+                glassPanels.forEach { it.refresh() }
                 if (currentTab == TAB_LOCATION) {
                     if (markerRunning) applyLocationAtCenter(announce = false)  // 运行中拖动 = 实时把模拟点挪过来
                     else updateAnchorFromCenter()
@@ -286,6 +345,7 @@ class MainActivity : AppCompatActivity() {
         // 进入路线页时重画当前路线(重启后自动恢复的那条也会显示)
         if (tab == TAB_ROUTE) updateRoutePreview()
         panels.forEachIndexed { i, v -> v.visibility = if (i == tab) View.VISIBLE else View.GONE }
+        if (mapVisible) glassPanels.forEach { v -> if (v.visibility == View.VISIBLE) v.refresh() }
         if (tab == TAB_SETTINGS) refreshAuthStatus()
         setMapResumed(mapVisible)
     }
@@ -368,6 +428,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btn_open_dev).setOnClickListener {
             startActivity(Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS))
         }
+        findViewById<Button>(R.id.btn_float).setOnClickListener { toggleFloating() }
 
         val seek = findViewById<SeekBar>(R.id.speed_seek)
         seek.progress = 30 // 3.0 m/s
@@ -391,6 +452,44 @@ class MainActivity : AppCompatActivity() {
         }
         refreshIdleStatus()
         refreshVersion()
+        requestIgnoreBatteryOnce()
+    }
+
+    /** 悬浮窗:先查 SYSTEM_ALERT_WINDOW 授权,再要求模拟已在跑,最后切换 FloatingPanelService */
+    private fun toggleFloating() {
+        if (!Settings.canDrawOverlays(this)) {
+            Toast.makeText(this, R.string.toast_float_perm, Toast.LENGTH_SHORT).show()
+            startActivity(
+                Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    android.net.Uri.parse("package:$packageName")
+                )
+            )
+            return
+        }
+        if (!FloatingPanelService.isShowing && MockLocationService.currentMotion == null) {
+            Toast.makeText(this, R.string.toast_float_need_run, Toast.LENGTH_SHORT).show()
+            return
+        }
+        FloatingPanelService.toggle(this)
+    }
+
+    /** 电池优化白名单引导(保活四件套之一):只问一次,拒绝后不再骚扰 */
+    private fun requestIgnoreBatteryOnce() {
+        val prefs = prefs()
+        if (prefs.getBoolean("battery_asked", false)) return
+        prefs.edit().putBoolean("battery_asked", true).apply()
+        val pm = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        if (pm.isIgnoringBatteryOptimizations(packageName)) return
+        try {
+            startActivity(
+                Intent(
+                    android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                    android.net.Uri.parse("package:$packageName")
+                )
+            )
+        } catch (_: Exception) {
+        }
     }
 
     private fun setAnchor(wgs: GeoPoint, animateCamera: Boolean) {
@@ -637,34 +736,10 @@ class MainActivity : AppCompatActivity() {
             UpdateChecker.check(repo, version) { result ->
                 runOnUiThread {
                     when {
+                        // 检查失败不打扰用户:轻提示,不弹窗
                         !result.ok ->
-                            androidx.appcompat.app.AlertDialog.Builder(this)
-                                .setTitle(R.string.update_failed_title)
-                                .setMessage(getString(R.string.update_failed, result.error ?: ""))
-                                .setPositiveButton(android.R.string.ok, null)
-                                .show()
-                        result.hasUpdate -> {
-                            if (BuildConfig.KEY_ENFORCE) {
-                                showForceUpdateDialog(result) // 分发版:发现新版必须更新,无取消
-                            } else {
-                                val notes = result.notes.take(400)
-                                androidx.appcompat.app.AlertDialog.Builder(this)
-                                    .setTitle(getString(R.string.update_available_title, result.latestVersion))
-                                    .setMessage(
-                                        if (notes.isBlank()) getString(R.string.update_goto_page)
-                                        else notes + "\n\n" + getString(R.string.update_goto_page)
-                                    )
-                                    .setPositiveButton(R.string.btn_goto_download) { _, _ ->
-                                        runCatching {
-                                            startActivity(
-                                                Intent(Intent.ACTION_VIEW, Uri.parse(result.apkUrl.ifBlank { result.releasesUrl }))
-                                            )
-                                        }
-                                    }
-                                    .setNegativeButton(android.R.string.cancel, null)
-                                    .show()
-                            }
-                        }
+                            Toast.makeText(this, R.string.update_check_quiet_fail, Toast.LENGTH_SHORT).show()
+                        result.hasUpdate -> showUpdateDialog(result, BuildConfig.KEY_ENFORCE)
                         else ->
                             androidx.appcompat.app.AlertDialog.Builder(this)
                                 .setTitle(getString(R.string.settings_update))
@@ -681,6 +756,64 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btn_export_diag).setOnClickListener { exportDiagnostics() }
         setupAmapKeySection()
         setupSettingsTabs()
+        setupQrLongPress()
+    }
+
+    /** 打赏/频道二维码:长按保存到相册,供微信「扫一扫→相册」识别 */
+    private fun setupQrLongPress() {
+        listOf(
+            R.id.img_qr_appreciate to R.drawable.qr_appreciate,
+            R.id.img_qq_channel to R.drawable.qr_qq_channel,
+        ).forEach { (viewId, drawableId) ->
+            findViewById<View>(viewId).setOnLongClickListener {
+                saveQrToGallery(drawableId)
+                true
+            }
+        }
+    }
+
+    private fun saveQrToGallery(drawableId: Int) {
+        val name = "MockRun-qr-${if (drawableId == R.drawable.qr_appreciate) "appreciate" else "channel"}.jpg"
+        val bitmap = BitmapFactory.decodeResource(resources, drawableId)
+        val toastText = if (bitmap == null) {
+            getString(R.string.qr_save_fail)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (saveQrViaMediaStore(name, bitmap)) getString(R.string.qr_saved)
+            else getString(R.string.qr_save_fail)
+        } else if (saveQrLegacy(name, bitmap)) {
+            getString(R.string.qr_saved_fallback, lastLegacyPath)
+        } else {
+            getString(R.string.qr_save_fail)
+        }
+        lastLegacyPath = null
+        Toast.makeText(this, toastText, Toast.LENGTH_LONG).show()
+    }
+
+    private var lastLegacyPath: String? = null
+
+    private fun saveQrViaMediaStore(name: String, bitmap: Bitmap): Boolean {
+        val values = android.content.ContentValues().apply {
+            put(android.provider.MediaStore.Images.Media.DISPLAY_NAME, name)
+            put(android.provider.MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+            put(android.provider.MediaStore.Images.Media.RELATIVE_PATH,
+                android.os.Environment.DIRECTORY_PICTURES + "/MockRun")
+        }
+        val uri = contentResolver.insert(
+            android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values) ?: return false
+        return runCatching {
+            contentResolver.openOutputStream(uri)?.use { bitmap.compress(Bitmap.CompressFormat.JPEG, 95, it) } != null
+        }.getOrDefault(false).also { if (!it) contentResolver.delete(uri, null, null) }
+    }
+
+    private fun saveQrLegacy(name: String, bitmap: Bitmap): Boolean {
+        val dir = java.io.File(getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES), "MockRun")
+        return runCatching {
+            dir.mkdirs()
+            val file = java.io.File(dir, name)
+            file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 95, it) }
+            lastLegacyPath = file.absolutePath
+            true
+        }.getOrDefault(false)
     }
 
     /** 设置页三段子页:地图设置 / 更新 / 打赏(待开发) */
@@ -809,29 +942,125 @@ class MainActivity : AppCompatActivity() {
         if (repo.isBlank()) return
         UpdateChecker.check(repo, currentVersion()) { result ->
             if (result.ok && result.hasUpdate) {
-                runOnUiThread { showForceUpdateDialog(result) }
+                runOnUiThread { showUpdateDialog(result, enforce = true) }
             }
         }
     }
 
-    /** 不可取消的更新对话框:分发版专用;debug 版检查更新仍可取消 */
-    private fun showForceUpdateDialog(result: UpdateChecker.Result) {
+    /** 统一更新对话框:分发版不可取消无关闭;debug 版可取消 */
+    private fun showUpdateDialog(result: UpdateChecker.Result, enforce: Boolean) {
         val notes = result.notes.take(400)
-        androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle(getString(R.string.force_update_title))
-            .setMessage(
-                getString(R.string.update_available_title, result.latestVersion) +
-                    (if (notes.isBlank()) "" else "\n\n$notes")
-            )
-            .setCancelable(false)
-            .setPositiveButton(R.string.btn_goto_download) { _, _ ->
-                runCatching {
-                    startActivity(
-                        Intent(Intent.ACTION_VIEW, Uri.parse(result.apkUrl.ifBlank { result.releasesUrl }))
-                    )
+        val title = getString(R.string.update_available_title, result.latestVersion)
+        val message = if (enforce) {
+            title + (if (notes.isBlank()) "" else "\n\n$notes")
+        } else {
+            (if (notes.isBlank()) "" else "$notes\n\n") + getString(R.string.update_ready_hint)
+        }
+        val dlg = androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(if (enforce) getString(R.string.force_update_title) else title)
+            .setMessage(message)
+            .setCancelable(!enforce)
+            .setPositiveButton(R.string.btn_download_install) { _, _ -> startUpdateDownload(result) }
+            .setNeutralButton(R.string.btn_open_release_page) { _, _ -> openUrl(result.releasesUrl) }
+            .apply {
+                if (!enforce) {
+                    setNegativeButton(R.string.btn_cancel_download) { _, _ -> updateDownload?.cancel() }
                 }
             }
             .show()
+        trackUpdateDialog(dlg)
+    }
+
+    /** 应用内下载:镜像源链优先、原链兜底;已有同尺寸成品直接进安装不重下 */
+    private fun startUpdateDownload(result: UpdateChecker.Result) {
+        val target = java.io.File(java.io.File(filesDir, "update"), "update.apk")
+        if (result.apkSize > 0 && target.isFile && target.length() == result.apkSize) {
+            tryInstall(target)
+            return
+        }
+        val sources = UpdateChecker.apkSources(result.apkUrl)
+        if (sources.isEmpty()) {   // release 没挂 .apk 资产:退回浏览器开发布页
+            openUrl(result.releasesUrl)
+            return
+        }
+
+        val enforce = BuildConfig.KEY_ENFORCE
+        val dlg = androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(getString(R.string.update_downloading_title, result.latestVersion))
+            .setMessage(getString(R.string.update_downloading_progress, 0))
+            .setCancelable(!enforce)
+            .setOnCancelListener { updateDownload?.cancel() }
+            .setPositiveButton(R.string.btn_retry, null)
+            .apply {
+                if (!enforce) {
+                    setNegativeButton(R.string.btn_cancel_download) { _, _ -> updateDownload?.cancel() }
+                }
+            }
+            .show()
+        dlg.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).isEnabled = false
+        trackUpdateDialog(dlg)
+
+        updateDownload = UpdateDownloader.download(
+            sources, target, result.apkSize,
+            onProgress = { pct ->
+                runOnUiThread {
+                    if (updateDialog === dlg && dlg.isShowing) {
+                        dlg.setMessage(getString(R.string.update_downloading_progress, pct))
+                    }
+                }
+            },
+        ) { ok, file, error ->
+            runOnUiThread {
+                if (updateDialog !== dlg) return@runOnUiThread // 已取消/已关闭
+                if (ok && file != null) {
+                    dlg.dismiss()
+                    tryInstall(file)
+                } else {
+                    dlg.setMessage(getString(R.string.update_download_failed, error ?: "下载失败"))
+                    dlg.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).apply {
+                        isEnabled = true
+                        setOnClickListener {
+                            dlg.dismiss()
+                            startUpdateDownload(result)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /** 装前查「安装未知应用」授权(minSdk 26 起 API 恒在);没授权先去系统设置,回来续装 */
+    private fun tryInstall(apk: java.io.File) {
+        pendingInstallApk = apk
+        if (!packageManager.canRequestPackageInstalls()) {
+            runCatching {
+                installPermissionLauncher.launch(
+                    Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName"))
+                )
+            }
+            return
+        }
+        installApk(apk)
+    }
+
+    private fun installApk(apk: java.io.File) {
+        pendingInstallApk = null
+        val uri = androidx.core.content.FileProvider.getUriForFile(this, "$packageName.fileprovider", apk)
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "application/vnd.android.package-archive")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        runCatching { startActivity(intent) }
+            .onFailure { Toast.makeText(this, R.string.update_install_failed, Toast.LENGTH_LONG).show() }
+    }
+
+    private fun trackUpdateDialog(dlg: androidx.appcompat.app.AlertDialog) {
+        updateDialog = dlg
+        dlg.setOnDismissListener { if (updateDialog === dlg) updateDialog = null }
+    }
+
+    private fun openUrl(url: String) {
+        runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
     }
 
     private fun showKeyQuotaDialog() {
@@ -1048,6 +1277,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        updateDownload?.cancel()
         mapView.onDestroy()
         super.onDestroy()
     }
