@@ -14,7 +14,7 @@
 
 ## 下载
 
-前往 [Releases](https://github.com/michaellu2007/mocklocation/releases) 页面下载最新 APK（Android 8.0+，arm64-v8a）。更新完全自愿：App 内的「检查更新」仅在主动点击时发起，不会自动下载或强制升级。
+前往 [Releases](https://github.com/michaellu2007/mocklocation/releases) 页面下载最新 APK（Android 8.0+，arm64-v8a）
 
 ## 工作原理（为什么不需要 root）
 
