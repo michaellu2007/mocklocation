@@ -72,17 +72,6 @@ X(t+dt) = clamp( X(t) + σ·√dt·N(0,1) − α·X(t)·dt )
 
 > 🐕 **实测声明**：本项目目前**仅在 Redmi K30 Pro（Android 12）和Oneplus ace5（coloros15）上实测，高德可以模拟，微信定位失败，小程序内部尚未测试**。其他机型理论可用（Android 8.0+，无厂商魔改限制即可），但未实测，欢迎反馈使用情况。
 
-## 构建（开发者）
-
-```bash
-./gradlew assembleDebug        # 出包 app/build/outputs/apk/debug/
-./gradlew assembleRelease      # release（复用 debug 签名，个人分发用）
-./gradlew :app:testDebugUnitTest :app:lintDebug   # 门禁
-```
-
-- 工具链：AGP 9.4.0（内置 Kotlin）/ Gradle 9.6.1 / JDK 17+
-- 本仓库镜像配置面向国内网络（阿里云 maven + 腾讯 gradle 分发），`dl.google.com` 可直连者可自行还原
-- 高德 Key：`local.properties` 填 `amap_key=`（构建期注入），或运行时在设置页填入个人 Key
 
 ## 致谢与边界
 
