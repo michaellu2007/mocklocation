@@ -126,6 +126,10 @@
     <string name="channel_subtitle">比格在校园 · 频道号 pd06300811</string>
     <string name="channel_joke">欢迎 <strike>技术交流</strike> 吹牛逼</string>
     <string name="qr_hint">长按二维码可保存到相册,再用微信/扫一扫识别</string>
+    <string name="btn_share_wechat">分享二维码到微信识别</string>
+    <string name="btn_join_channel">一键加入频道</string>
+    <string name="channel_open_failed">没找到腾讯频道/QQ,请先安装后再点,或长按二维码保存图片扫码</string>
+    <string name="qr_share_hint">发给任意聊天(如文件传输助手),点开图片长按即可识别</string>
     <string name="qr_saved">已保存到相册 Pictures/MockRun,去微信「扫一扫 → 相册」识别</string>
     <string name="qr_saved_fallback">已保存:%1$s</string>
     <string name="qr_save_fail">保存失败,截图后去相册扫也行</string>

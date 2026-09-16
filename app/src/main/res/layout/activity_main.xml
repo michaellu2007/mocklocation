@@ -742,6 +742,21 @@
                                 android:scaleType="fitCenter"
                                 android:src="@drawable/qr_appreciate" />
 
+                            <Button
+                                android:id="@+id/btn_share_appreciate"
+                                style="?attr/materialButtonOutlinedStyle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:text="@string/btn_share_wechat" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="@string/qr_share_hint"
+                                android:textSize="11sp" />
+
                             <View
                                 android:layout_width="match_parent"
                                 android:layout_height="1dp"
@@ -781,6 +796,13 @@
                                 android:padding="8dp"
                                 android:scaleType="fitCenter"
                                 android:src="@drawable/qr_qq_channel" />
+
+                            <Button
+                                android:id="@+id/btn_join_channel"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:text="@string/btn_join_channel" />
 
                             <TextView
                                 android:layout_width="wrap_content"

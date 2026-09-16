@@ -759,7 +759,7 @@ class MainActivity : AppCompatActivity() {
         setupQrLongPress()
     }
 
-    /** 打赏/频道二维码:长按保存到相册,供微信「扫一扫→相册」识别 */
+    /** 打赏/频道二维码:长按保存到相册;一键加入频道;赞赏码分享到微信 */
     private fun setupQrLongPress() {
         listOf(
             R.id.img_qr_appreciate to R.drawable.qr_appreciate,
@@ -770,6 +770,37 @@ class MainActivity : AppCompatActivity() {
                 true
             }
         }
+        // QQ 频道分享链接(opencv 从 qr_qq_channel.jpg 解出),直接唤起腾讯频道客户端
+        findViewById<View>(R.id.btn_join_channel).setOnClickListener {
+            runCatching {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://pd.qq.com/s/dv1hoskkv?b=5")))
+            }.onFailure {
+                Toast.makeText(this, R.string.channel_open_failed, Toast.LENGTH_LONG).show()
+            }
+        }
+        findViewById<View>(R.id.btn_share_appreciate).setOnClickListener { shareQrToWechat() }
+    }
+
+    /** 赞赏码是 wxp:// 内部链接外部唤不起来,退而分享图片:发给任意聊天后点开长按识别 */
+    private fun shareQrToWechat() {
+        val dir = java.io.File(cacheDir, "share").apply { mkdirs() }
+        val file = java.io.File(dir, "qr_appreciate.jpg")
+        val bitmap = BitmapFactory.decodeResource(resources, R.drawable.qr_appreciate)
+        val ok = bitmap != null && runCatching {
+            file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 95, it) }
+            true
+        }.getOrDefault(false)
+        if (!ok) {
+            Toast.makeText(this, R.string.qr_save_fail, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val uri = androidx.core.content.FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "image/jpeg"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        startActivity(Intent.createChooser(intent, getString(R.string.btn_share_wechat)))
     }
 
     private fun saveQrToGallery(drawableId: Int) {
