@@ -41,6 +41,7 @@
     <string name="btn_my">我的路线</string>
     <string name="cb_finish_pause">跑完暂停(不勾=从头循环)</string>
     <string name="settings_step_jitter">步幅抖动(跑步/步行档生效)</string>
+    <string name="force_update_title">请先更新 BeagleInCampus</string>
 
     <string name="tab_location">定位</string>
     <string name="tab_route">路线</string>

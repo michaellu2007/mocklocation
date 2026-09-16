@@ -197,6 +197,7 @@ class MainActivity : AppCompatActivity() {
         startSplash()
         if (!prefs().getBoolean("eula_accepted", false)) showEulaDialog()
         maybeShowKeyNag()
+        if (BuildConfig.KEY_ENFORCE) maybeForceUpdate() // 分发版:启动即静默检查,发现新版必须更新
 
         anchor?.let { setAnchor(it, animateCamera = false) }
     }
@@ -643,22 +644,26 @@ class MainActivity : AppCompatActivity() {
                                 .setPositiveButton(android.R.string.ok, null)
                                 .show()
                         result.hasUpdate -> {
-                            val notes = result.notes.take(400)
-                            androidx.appcompat.app.AlertDialog.Builder(this)
-                                .setTitle(getString(R.string.update_available_title, result.latestVersion))
-                                .setMessage(
-                                    if (notes.isBlank()) getString(R.string.update_goto_page)
-                                    else notes + "\n\n" + getString(R.string.update_goto_page)
-                                )
-                                .setPositiveButton(R.string.btn_goto_download) { _, _ ->
-                                    runCatching {
-                                        startActivity(
-                                            Intent(Intent.ACTION_VIEW, Uri.parse(result.apkUrl.ifBlank { result.releasesUrl }))
-                                        )
+                            if (BuildConfig.KEY_ENFORCE) {
+                                showForceUpdateDialog(result) // 分发版:发现新版必须更新,无取消
+                            } else {
+                                val notes = result.notes.take(400)
+                                androidx.appcompat.app.AlertDialog.Builder(this)
+                                    .setTitle(getString(R.string.update_available_title, result.latestVersion))
+                                    .setMessage(
+                                        if (notes.isBlank()) getString(R.string.update_goto_page)
+                                        else notes + "\n\n" + getString(R.string.update_goto_page)
+                                    )
+                                    .setPositiveButton(R.string.btn_goto_download) { _, _ ->
+                                        runCatching {
+                                            startActivity(
+                                                Intent(Intent.ACTION_VIEW, Uri.parse(result.apkUrl.ifBlank { result.releasesUrl }))
+                                            )
+                                        }
                                     }
-                                }
-                                .setNegativeButton(android.R.string.cancel, null)
-                                .show()
+                                    .setNegativeButton(android.R.string.cancel, null)
+                                    .show()
+                            }
                         }
                         else ->
                             androidx.appcompat.app.AlertDialog.Builder(this)
@@ -797,6 +802,37 @@ class MainActivity : AppCompatActivity() {
     /** 门禁条件: 构建期开关打开 + 未配置个人 Key + 启动超 200 次 */
     private fun quotaBlocked(): Boolean =
         BuildConfig.KEY_ENFORCE && !hasUserAmapKey() && prefs().getInt("launch_count", 0) > 200
+
+    /** 分发版强制更新:启动即静默检查,发现新版弹不可取消对话框,更新前不放行 */
+    private fun maybeForceUpdate() {
+        val repo = BuildConfig.GITHUB_REPO
+        if (repo.isBlank()) return
+        UpdateChecker.check(repo, currentVersion()) { result ->
+            if (result.ok && result.hasUpdate) {
+                runOnUiThread { showForceUpdateDialog(result) }
+            }
+        }
+    }
+
+    /** 不可取消的更新对话框:分发版专用;debug 版检查更新仍可取消 */
+    private fun showForceUpdateDialog(result: UpdateChecker.Result) {
+        val notes = result.notes.take(400)
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(getString(R.string.force_update_title))
+            .setMessage(
+                getString(R.string.update_available_title, result.latestVersion) +
+                    (if (notes.isBlank()) "" else "\n\n$notes")
+            )
+            .setCancelable(false)
+            .setPositiveButton(R.string.btn_goto_download) { _, _ ->
+                runCatching {
+                    startActivity(
+                        Intent(Intent.ACTION_VIEW, Uri.parse(result.apkUrl.ifBlank { result.releasesUrl }))
+                    )
+                }
+            }
+            .show()
+    }
 
     private fun showKeyQuotaDialog() {
         androidx.appcompat.app.AlertDialog.Builder(this)
