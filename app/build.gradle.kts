@@ -26,8 +26,8 @@ android {
         applicationId = "com.learning.mockrun"
         minSdk = 26
         targetSdk = 36
-        versionCode = 5
-        versionName = "0.0.4"
+        versionCode = 6
+        versionName = "0.0.5"
 
         // 检查更新的发布仓库(GitHub Releases);留空 = 检查更新按钮走纯本地文案
         buildConfigField("String", "GITHUB_REPO", "\"$githubRepo\"")
