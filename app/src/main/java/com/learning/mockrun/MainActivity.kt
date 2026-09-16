@@ -781,7 +781,7 @@ class MainActivity : AppCompatActivity() {
     private fun maybeShowKeyNag() {
         if (!BuildConfig.KEY_ENFORCE || hasUserAmapKey()) return
         val count = prefs().getInt("launch_count", 0)
-        if (count <= 10) return
+        if (count <= 200) return
         if (quotaBlocked()) {
             showKeyQuotaDialog()
         } else {
@@ -794,9 +794,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** 门禁条件: 构建期开关打开 + 未配置个人 Key + 启动超 10 次 */
+    /** 门禁条件: 构建期开关打开 + 未配置个人 Key + 启动超 200 次 */
     private fun quotaBlocked(): Boolean =
-        BuildConfig.KEY_ENFORCE && !hasUserAmapKey() && prefs().getInt("launch_count", 0) > 10
+        BuildConfig.KEY_ENFORCE && !hasUserAmapKey() && prefs().getInt("launch_count", 0) > 200
 
     private fun showKeyQuotaDialog() {
         androidx.appcompat.app.AlertDialog.Builder(this)
