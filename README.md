@@ -75,7 +75,7 @@ X(t+dt) = clamp( X(t) + σ·√dt·N(0,1) − α·X(t)·dt )
 
 ## 致谢与边界
 
-- 路线回放与噪声建模思路参考开源项目 [LocationSpoofer]([(https://github.com/HuangZhuoRui/LocationSpoofer])（OU 过程、双通道分离、地图引擎抽象），按本项目的推模型架构重写。
+- 路线回放与噪声建模思路参考开源项目 [LocationSpoofer][https://github.com/HuangZhuoRui/LocationSpoofer]（OU 过程、双通道分离、地图引擎抽象），按本项目的推模型架构重写。
 - 高德、百度 SDK 版权归各自所有者；本应用与它们没有任何商业关系。
 
 **再次声明：仅供学习与娱乐，用于作弊，后果自负。**
